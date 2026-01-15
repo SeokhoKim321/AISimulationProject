@@ -1,3 +1,7 @@
+// ==========================
+// Sequence.java
+// ==========================
+
 package com.example.ai.tree;
 
 public class Sequence extends Composite {

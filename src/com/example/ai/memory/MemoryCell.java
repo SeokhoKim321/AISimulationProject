@@ -1,4 +1,6 @@
-// src/com/example/ai/memory/MemoryCell.java
+// ==========================
+// MemoryCell.java
+// ==========================
 
 package com.example.ai.memory;
 
@@ -23,8 +25,6 @@ public class MemoryCell {
     void setActivationLevel(double level) {
         this.activationLevel = level;
     }
-
-
     @Override
     public String toString() {
         return String.format("<Cell: %s, Activation: %.2f>", this.name, this.activationLevel);

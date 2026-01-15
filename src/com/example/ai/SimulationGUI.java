@@ -1,139 +1,275 @@
+// ==========================
+// SimulationGUI.java
+// ==========================
+
 package com.example.ai;
 
 import javafx.animation.AnimationTimer;
 import javafx.application.Application;
 import javafx.scene.Scene;
+import javafx.scene.chart.LineChart;
+import javafx.scene.chart.NumberAxis;
+import javafx.scene.chart.XYChart;
 import javafx.scene.control.Button;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
-import javafx.stage.Stage;
-import java.util.ArrayList;
-import java.util.List;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Line;
 import javafx.scene.text.Text;
+import javafx.stage.Stage;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
+public class SimulationGUI extends Application {
+    private Airspace airspace;
+    private List<Aircraft> allAircrafts = new ArrayList<>();
+    private List<ImageView> allViews = new ArrayList<>();
+    private List<Agent> allAgents = new ArrayList<>();
 
-public class SimulationGUI extends Application { // 이 클래스가 JavaFX 그래픽 창을 띄울 수 있는 특별한 "애플리케이션" 임을 선언
-    private Airspace airspace;// 시뮬레이션의 '공역' 개체를 담을 변수
-    private List<Aircraft> allAircrafts = new ArrayList<>();  // 시뮬레이션에 등장하는 모든'항공기' 객체들을 담아둘 리스트
-    private List<ImageView> allViews = new ArrayList<>(); // 항공기를 화면에 그리기 위한 '전투기 이미지' 객체들을 담아둘 리스트
-    private List<Agent> allAgents = new ArrayList<>(); // [새로 추가]
+    // [수정] 레이아웃 분리를 위해 Pane 이름 변경 (root -> simulationPane)
+    private Pane simulationPane; // 비행기가 날아다니는 '중앙 도화지'
+    private AnimationTimer timer;  // 1초에 60번 업데이트되는 타이머
+    private HBox buttonBox; // 버튼들을 담는 상자
 
-    private Pane root; // '도화지'를 멤버 변수로 승격(리셋시 필요)
-    private AnimationTimer timer; // '타이머'를 멤버 변수로 승격(시작 / 정지시 필요)
-    private HBox buttonBox; // 버튼들을 담을 상자
+    // [신규] 그래프 관련 변수들
+    // "어떤 데이터(이름)"가 "어떤 그래프 시리즈"에 대응되는지 저장하는 맵
+    private Map<String, XYChart.Series<Number, Number>> seriesMap = new HashMap<>();
 
-    private int simulationTime = 0; // 시뮬레이션이 시작된 후 몇 프레임이 지났는지 세는 '프레임 카운터'
-//    private final int totalDuration = 2000;  // 이 시뮬레이션이 총 20초동안 실행될 것임을 설정
+
+    private double timeSeconds = 0.0; // 그래프 X축용 시간(초)
+
+    private int simulationTime = 0; // 시뮬레이션 내부 프레임 카운트
 
     @Override
-    public void start(Stage primaryStage) throws Exception { // main 메소드로부터 launch 명령을 받으면, JavaTX가 실제로 프로그램을 시작하는 지점
-        // primaryStage는 화면에 나타나는 '윈도우창' 그자체
-        primaryStage.setTitle("Civil Aircraft Simulation"); // 윈도우 창의 상단 제목 표시줄에 "Civil Aircraft Simulation"이라는 글자를 설정
+    public void start(Stage primaryStage) throws Exception {
+        primaryStage.setTitle("Civil Aircraft Simulation (Cognitive Monitor)");
+        // 기능 : 화면 레이아웃을 잡고, timer(심장박동)를 작동시킴.
 
-        // root(도화지)를 멤버 변수로 초기화
-        root = new Pane();
+        // 1. 전체 화면 레이아웃 (BorderPane 사용)
+        // 화면을 상단, 하단, 좌측, 우측, 중앙으로 나눌 수 있음
+        BorderPane mainLayout = new BorderPane();
 
-        // 버튼 생성
+        // 2. 시뮬레이션 도화지 (중앙 배치)
+        simulationPane = new Pane();
+        // 시뮬레이션 화면 크기 설정 (그래프 공간 확보를 위해 높이 조정)
+        simulationPane.setPrefSize(1400, 600);
+        mainLayout.setCenter(simulationPane); // 중앙에 배치
+
+        // 3. 버튼 상자 (상단 배치)
         Button startButton = new Button("시작");
         Button stopButton = new Button("정지");
         Button resetButton = new Button("리셋");
+        buttonBox = new HBox(10, startButton, stopButton, resetButton);
+        buttonBox.setStyle("-fx-padding: 10; -fx-background-color: #ddd;");
+        mainLayout.setTop(buttonBox); // 상단에 배치
 
-        // 버튼들을 HBox(가로 상자)에 담기
-        buttonBox = new HBox(10, startButton, stopButton, resetButton); // 10은 버튼 사이의 간격
-        buttonBox.setLayoutX(10);// 버튼 상자의 X 위치
-        buttonBox.setLayoutY(10);// 버튼 상자의 Y 위치
+        // 4. [핵심] 그래프 패널 생성 (하단 배치)
+        // createChartsPanel 메소드에서 그래프 패널 생성
+        FlowPane chartsPane = createChartsPanel();
+        mainLayout.setBottom(chartsPane); // 하단에 배치
 
-
-        this.timer = new AnimationTimer() { // 실시간 시뮬레이션의 심장. 게임처럼 매끄러운 움직임을 만들기 위해, 1초에 약 60번씩 반복 실행되는
-            // 특수 타이머를 생성
-            private long lastUpdate = 0; // 타이머가 너무 빨리 실행되는 것을 방지하기 위해, 마지막으로 업데이트한 시간을 기록하는 변수
+        // 5. 타이머 설정
+        this.timer = new AnimationTimer() {
+            private long lastUpdate = 0;
             @Override
-            public void handle(long now) { // AnimationTimer가 1초에 약 60번씩 실제로 호출하는 코드 블록. now는 현재 시스템 시간을 나노초 단위로 전달받음
-                if (now - lastUpdate >= 16_000_000) { // "만약 마지막 업데이트 이후 16,000,000나노초 이상이 지났다면" 코드 실행 / 약 60 FPS
-                    int currentSecond = (int) (simulationTime / 60.0); // 현재 프레임 카운터(simulationTime)를 60으로 나누어,
-                    // 시뮬레이션이 시작된지 몇'초가 지났는지 계산
+            public void handle(long now) {
+                if (now - lastUpdate >= 16_000_000) {
+                    int currentSecond = (int) (simulationTime / 60.0);
+                    airspace.update(currentSecond);
 
-                    airspace.update(currentSecond); // '공역' 객체에게 현재 '초'를 알려주어, 공역의 상태를 업데이트하도록 지시
-
-                    // 핵심 수정 부분
-                    // 생각 단계 : 모든 두뇌(agent)가 먼저 생각하고 '몸체에 명령을 내림
+                    // 생각 단계
                     for (Agent agent : allAgents) {
                         agent.update(airspace);
                     }
 
-                    // 모든 몸체가 움직임
-                    for (Aircraft aircraft : allAircrafts) {  // allAircrafts 리스트에 있는 모든 항공기 객체를 하나씩 꺼내어 반복
-                        aircraft.executeMovement(); //  각 항공기에게 '방금 결정한 행동'에 맞춰 당신의 X,Y좌표와 각도를 '실제로 움직여라고 지시
+                    // 행동 단계
+                    for (Aircraft aircraft : allAircrafts) {
+                        aircraft.executeMovement();
                     }
 
-                    updateUI(); // 아래쪽에 정의된 updateUI 메소드를 호출하여, "모든 항공기의 바뀐 위치와 각도를 실제 '화면'에 다시 그리라고 지시
-                    simulationTime++; // 프레임 카운터 1증가
-//                }else{
-//                    timer.stop(); // 150초가 되면 자동 정지
-//                    System.out.println("시뮬레이션 종료!");
+                    updateUI();     // 비행기 화면 갱신
+                    updateCharts(); // [추가] 그래프 데이터 갱신
+
+                    simulationTime++;
+                    timeSeconds += 0.016; // 약 60FPS 기준 시간 흐름 누적
+                    lastUpdate = now;
                 }
-                lastUpdate = now; // '마지막 업데이트 시간'을 '현재 시간'으로 갱신
             }
         };
-        // --- [새로 추가] 버튼 이벤트 핸들링 ---
-        startButton.setOnAction(e -> {
-            timer.start(); // 타이머 시작
-        });
 
-        stopButton.setOnAction(e -> {
-            timer.stop(); // 타이머 정지
-        });
-
+        // 버튼 이벤트
+        startButton.setOnAction(e -> timer.start());
+        stopButton.setOnAction(e -> timer.stop());
         resetButton.setOnAction(e -> {
-            timer.stop(); // 1. 타이머 정지
-            simulationTime = 0; // 2. 시간 리셋
-            initializeSimulation(root); // 3. 시뮬레이션 초기화 (모든 것 다시 그리기)
+            timer.stop();
+            simulationTime = 0;
+            timeSeconds = 0.0;
+            initializeSimulation();
+            clearCharts(); // 그래프 데이터도 초기화
         });
 
-        // [수정] 도화지에 버튼 상자를 먼저 추가
-        root.getChildren().add(buttonBox);
+        // 초기화 실행
+        initializeSimulation();
 
-        // [수정] 시뮬레이션을 처음 한 번 초기화 (항공기 배치)
-        initializeSimulation(root);
-
-        timer.start(); //위에서 설계한 AnimationTimer를 시작시킴. 이 순간부터 handle 메소드가 1초에 60번씩 돌기 시작함
-
-        Scene scene = new Scene(root, 1400, 1000); // 우리가 만든 '도화지'를 '가로 1400, 세로 800' 크기의 장면으로 만듬
-        primaryStage.setScene(scene); // '윈도우 창'에 방금 만든 '장면'을 끼워넣음
-        primaryStage.show(); // 최종적으로 윈도우 창을 사용자 화면에 보여줌
+        // 장면 생성 (전체 레이아웃인 mainLayout을 넣음)
+        Scene scene = new Scene(mainLayout, 1400, 900); // 높이를 좀 더 늘림
+        primaryStage.setScene(scene);
+        primaryStage.show();
     }
 
-    private void initializeSimulation(Pane root) { // start 메소드에서 호출했던 '초기 설정' 전용 메소드
-        // [수정] 리셋을 위해 리스트들을 모두 비움
+    // --- [신규] 그래프 패널 생성 메소드 ---
+    private FlowPane createChartsPanel() {
+        // 그래프들을 가로로 흐르듯 배치하는 패널
+        FlowPane flowPane = new FlowPane();
+        flowPane.setHgap(10);
+        flowPane.setVgap(10);
+        flowPane.setStyle("-fx-padding: 10; -fx-background-color: #f4f4f4; -fx-border-color: #ccc; -fx-border-width: 1px 0 0 0;");
+        flowPane.setPrefHeight(300); // 하단 패널 높이
+
+        // 우리가 추적할 기억(MemoryCell)의 이름들
+        // (Agent.java의 cellNames 배열과 일치해야 데이터가 나옵니다)
+        String[] memoryNames = {"ClosestAircraft", "Fuel Level", "Altitude", "Obstacle"};
+
+        for (String name : memoryNames) {
+            // 1. X축 (시간)
+            NumberAxis xAxis = new NumberAxis();
+            xAxis.setLabel("Time (s)");
+            xAxis.setAutoRanging(false); // 스크롤 효과를 위해 자동 범위 끔
+            xAxis.setTickUnit(5);
+
+            // 2. Y축 (활성도 0.0 ~ 1.0)
+            // 논문 이미지처럼 0~1 사이 범위를 고정합니다.
+            NumberAxis yAxis = new NumberAxis(0, 1.1, 0.25);
+            yAxis.setLabel("Excitation");
+            yAxis.setAutoRanging(false);
+
+            // 3. 라인 차트 생성
+            LineChart<Number, Number> lineChart = new LineChart<>(xAxis, yAxis);
+            lineChart.setTitle(name); // 제목 설정 (예 : Altitude)
+            lineChart.setCreateSymbols(false); // 점(Symbol)을 없애고 선만 그림 (성능 최적화 필수!)
+            lineChart.setAnimated(false);      // 실시간 갱신 시 애니메이션 끄기 (성능 최적화)
+            lineChart.setPrefSize(400, 250);   // 그래프 크기 지정
+
+            // 4. 데이터 시리즈 생성
+            XYChart.Series<Number, Number> series = new XYChart.Series<>();
+            series.setName("Agent 1 (Blue)");  // 범례 이름
+            lineChart.getData().add(series); // 차트에 선 추가
+
+            // 5. 나중에 데이터를 넣기 위해 '이름표'를 붙여서 저장
+            seriesMap.put(name, series);
+
+            // 패널에 차트 추가
+            flowPane.getChildren().add(lineChart);
+        }
+
+        return flowPane; // 생성된 그래프 패널 반환
+    }
+
+    // --- [신규] 그래프 데이터 업데이트 메소드 ---
+    private void updateCharts() {
+        if (allAgents.isEmpty()) return;
+
+        // 여기서는 '1번 항공기(Blue)'의 두뇌 상태만 모니터링합니다.
+        Agent targetAgent = allAgents.get(0);
+
+        // Map에 저장된 모든 그래프 시리즈를 순회하며 업데이트
+        for (String name : seriesMap.keySet()) {
+            XYChart.Series<Number, Number> series = seriesMap.get(name);
+
+            // Agent에게서 해당 기억의 활성도(Activation Level)를 가져옴
+            double activation = targetAgent.getActivationLevel(name);
+
+            // 데이터 추가 (X: 시간, Y: 활성도)
+            series.getData().add(new XYChart.Data<>(timeSeconds, activation));
+
+            // 데이터가 너무 많이 쌓이면 메모리 부족 및 렉 발생 -> 오래된 데이터 삭제 (슬라이딩 윈도우)
+            if (series.getData().size() > 500) { // 약 8초 분량 데이터 유지
+                series.getData().remove(0);
+            }
+
+            // X축이 시간에 따라 흘러가도록 범위 조정 (현재 시간 기준 -10초 ~ 현재 시간)
+            NumberAxis xAxis = (NumberAxis) series.getChart().getXAxis();
+            xAxis.setLowerBound(Math.max(0, timeSeconds - 10));
+            xAxis.setUpperBound(Math.max(10, timeSeconds));
+        }
+    }
+
+    // 그래프 초기화
+    private void clearCharts() {
+        for (XYChart.Series<Number, Number> series : seriesMap.values()) {
+            series.getData().clear();
+        }
+    }
+
+    // 기존 초기화 메소드 (매개변수 제거하고 멤버변수 사용)
+    private void initializeSimulation() {
         allAircrafts.clear();
         allAgents.clear();
         allViews.clear();
 
-        // [수정] '도화지'를 비움 (버튼 상자 제외)
-        root.getChildren().clear();
-        root.getChildren().add(buttonBox); // 버튼 상자는 다시 추가
+        simulationPane.getChildren().clear(); // 도화지 비우기
 
-        // [수정] 공역도 새로 만듦
         airspace = new Airspace();
 
-        // 1번 항공기: 왼쪽 위에서 오른쪽 아래로 비행
+        // [도심 협곡 시나리오]  장애물 삭제시 여기부터
+        // 파란 비행기 경로상에 빌딩 배치
+        Obstacle b1 = new Obstacle(400, 300, 100, 100); // (x, y, w, h)
+        Obstacle b2 = new Obstacle(600, 500, 100, 200);
+
+        airspace.addObstacle(b1);
+        airspace.addObstacle(b2);
+
+        // [수정 코드] 그라데이션과 테두리 적용
+        // 1. 빌딩 느낌의 그라데이션 페인트 생성 (좌상단은 밝은 회색, 우하단은 어두운 회색)
+        javafx.scene.paint.Stop[] stops = new javafx.scene.paint.Stop[] {
+                new javafx.scene.paint.Stop(0, javafx.scene.paint.Color.web("#A9A9A9")), // 밝은 회색 (콘크리트색)
+                new javafx.scene.paint.Stop(1, javafx.scene.paint.Color.web("#696969"))  // 어두운 회색 (그림자)
+        };
+        // (시작X, 시작Y, 끝X, 끝Y, 비례여부, 반복방법, 색상정지점들)
+        javafx.scene.paint.LinearGradient buildingPaint = new javafx.scene.paint.LinearGradient(
+                0, 0, 1, 1, true, javafx.scene.paint.CycleMethod.NO_CYCLE, stops
+        );
+
+        // 2. 사각형 생성 및 스타일 적용
+        javafx.scene.shape.Rectangle rect1 = new javafx.scene.shape.Rectangle(b1.getX(), b1.getY(), b1.getWidth(), b1.getHeight());
+        rect1.setFill(buildingPaint); // 그라데이션 채우기
+        rect1.setStroke(javafx.scene.paint.Color.DARKSLATEGRAY); // 진한 테두리 추가
+        rect1.setStrokeWidth(2); // 테두리 두께
+
+        javafx.scene.shape.Rectangle rect2 = new javafx.scene.shape.Rectangle(b2.getX(), b2.getY(), b2.getWidth(), b2.getHeight());
+        rect2.setFill(buildingPaint);
+        rect2.setStroke(javafx.scene.paint.Color.DARKSLATEGRAY);
+        rect2.setStrokeWidth(2);
+
+        // 3. (선택 사항) 약간의 그림자 효과 추가
+        javafx.scene.effect.DropShadow buildingShadow = new javafx.scene.effect.DropShadow(10, 5, 5, javafx.scene.paint.Color.BLACK);
+        rect1.setEffect(buildingShadow);
+        rect2.setEffect(buildingShadow);
+
+        simulationPane.getChildren().addAll(rect1, rect2);
+
+        // 장애물 삭제시 여기까지
+
+        // 1번 항공기
         Aircraft aircraft1 = new Aircraft(100, 100, "blue", 1200, 1000);
-        Agent agent1 = new Agent(aircraft1); // 몸체를 두뇌에 연결
-        // 2번 항공기: 오른쪽 아래에서 왼쪽 위로 비행
+        Agent agent1 = new Agent(aircraft1);
+        // 2번 항공기
         Aircraft aircraft2 = new Aircraft(1300, 800, "red",  100, 200);
         Agent agent2 = new Agent(aircraft2);
-        // 3번 항공기: 왼쪽 아래에서 오른쪽 위로 비행
+        // 3번 항공기
         Aircraft aircraft3 = new Aircraft(100, 800, "red", 1300, 100);
         Agent agent3 = new Agent(aircraft3);
+
         allAircrafts.add(aircraft1);
         allAircrafts.add(aircraft2);
         allAircrafts.add(aircraft3);
-
 
         allAgents.add(agent1);
         allAgents.add(agent2);
@@ -141,67 +277,73 @@ public class SimulationGUI extends Application { // 이 클래스가 JavaFX 그�
 
         airspace.addAgent(aircraft1);
         airspace.addAgent(aircraft2);
-        airspace.addAgent(aircraft3); // '공역' 객체에게도 이 3대의 항공기가 현재 공역에 존재함을 알려줌
+        airspace.addAgent(aircraft3);
 
-        try { // 이미지 파일을 불러오는 작업은 파일이 없을 경우 오류가 날 수 있으므로, try-catch 구문으로 감싸줌
+        try {
             Image blueJetImage = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/blue_jet.png")));
-            // resource 폴더에서 blue_jet.png 파일을 찾아' 이미지 ' 객체로 불러옴
             Image redJetImage = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/red_jet.png")));
-            // resource 폴더에서 red_jet.png 파일을 찾아' 이미지 ' 객체로 불러옴
 
-            for (Aircraft aircraft : allAircrafts) { // allAircrafts 리스트에 있는 모든 항공기를 하나씩 꺼내어 반복
+            for (Aircraft aircraft : allAircrafts) {
                 Image img = "blue".equals(aircraft.getTeam()) ? blueJetImage : redJetImage;
-                // 항공기의 팀을 확인(aircraft.getTeam()) 하여 'blue'팀이면 blueJetImage를 'red'팀이면 redJetImage를 imag 변수에 선택하여 담음
-                ImageView view = new ImageView(img); // 선택된 img를 화면에 표시할 수 있는 '이미지 뷰' 객체로 만듬
+                ImageView view = new ImageView(img);
                 view.setFitWidth(40);
                 view.setFitHeight(40);
-                // 이미지의 크기를 가로/세로 40픽셀로 조절
-                allViews.add(view); // 생성된 ImageView 객체를 allViews 리스트에 추가
+                allViews.add(view);
 
-                // 새로 추가 (항로 및 목적지에 X표시 추가)
-                // 1. 목적지에 "X" 표시 추가
                 Text destinationMark = new Text(aircraft.getDestX(), aircraft.getDestY(), "X");
-                destinationMark.setFill(Color.GRAY); // 회색으로 설정
+                destinationMark.setFill(Color.GRAY);
 
-                // 2. 항로(점선) 추가
                 Line flightPath = new Line();
-                flightPath.setStartX(aircraft.getX()); // 시작 X
-                flightPath.setStartY(aircraft.getY()); // 시작 Y
-                flightPath.setEndX(aircraft.getDestX()); // 목적지 X
-                flightPath.setEndY(aircraft.getDestY()); // 목적지 Y
-                flightPath.setStroke(Color.GRAY); // 회색으로 설정
-                flightPath.getStrokeDashArray().addAll(5.0, 5.0); // 5픽셀 그리고, 5픽셀 띄우는 점선
+                flightPath.setStartX(aircraft.getX());
+                flightPath.setStartY(aircraft.getY());
+                flightPath.setEndX(aircraft.getDestX());
+                flightPath.setEndY(aircraft.getDestY());
+                flightPath.setStroke(Color.GRAY);
+                flightPath.getStrokeDashArray().addAll(5.0, 5.0);
 
-                // ' 도화지'에 항로와 X 표시를 먼저 추가
-                root.getChildren().addAll(flightPath, destinationMark);
+                simulationPane.getChildren().addAll(flightPath, destinationMark);
             }
-            root.getChildren().addAll(allViews); // allViews 리스트에 담긴 모든 ImagView 객체들을 '도화지'에 한꺼번에 추가하여 화면에 보이도록 함
-        } catch (NullPointerException e) { // 만약 try 블록에서 resource 폴더에 이미지가 없어 NullPointerException(파일 없음 오류) 발생하면 catch 블록 실행
+            simulationPane.getChildren().addAll(allViews);
+        } catch (NullPointerException e) {
             System.err.println("이미지 파일을 찾을 수 없습니다!");
         }
     }
 
-    private void updateUI() { // AnimationTimer가 매 프레임 호출하는 '화면 그리기' 전용 메소드
-        for (int i = 0; i < allAircrafts.size(); i++) { // allAircrafts 리스트의 첫 번째부터 마지막까지 순서대로(i) 반복
-            Aircraft aircraft = allAircrafts.get(i); // i 번째 '항공기' 객체를 가져옴
-            ImageView view = allViews.get(i); // i 번째 '이미지 뷰'객체를 가져옴
-            view.setX(aircraft.getX() - view.getFitWidth() / 2); // '이미지 뷰'의 X좌표를 '항공기의 X좌표로 설정함
-            // 이미지 중심을 맞추기 위해 너비의 절반을 뺌
+    // 이 메소드를 찾아서 아래 내용으로 완전히 교체하세요.
+    private void updateUI() {
+        for (int i = 0; i < allAircrafts.size(); i++) {
+            Aircraft aircraft = allAircrafts.get(i);
+            ImageView view = allViews.get(i);
+
+            // 1. 위치 및 각도 업데이트 (기본)
+            view.setX(aircraft.getX() - view.getFitWidth() / 2);
             view.setY(aircraft.getY() - view.getFitHeight() / 2);
             view.setRotate(aircraft.getAngle());
 
-            // (충돌 회피 시각화를 위해 색상 변경 로직을 다시 추가 - 선택 사항)
-            if ("Evade".equals(aircraft.getTacticalState())) { // 만약 '항공기'의 현재 상태가 'Eavde' 라면:
-                view.setEffect(new javafx.scene.effect.DropShadow(20, javafx.scene.paint.Color.YELLOW));
-                // 이미지에 노란색 '그림자 효과'를 추가하여 회피 중임을 시각적으로 강조
-            } else {
-                view.setEffect(null); // 그렇지 않으면 이미지에 적용된 모든 효과 제거
+            // --- [시각화 핵심 수정] 비행기 테두리 효과(Glow) 적용 ---
+
+            // 적용할 효과를 담을 변수 (기본은 효과 없음)
+            javafx.scene.effect.DropShadow effect = null;
+
+            // A. [주인공 표시] 만약 이 비행기가 'Agent 1'(인덱스 0번)이라면?
+            if (i == 0) {
+                // 평소에도 밝은 하늘색(CYAN) 빛이 나도록 설정 (관찰 대상임을 표시)
+                // 반경(radius)을 30으로 크게 줘서 눈에 확 띄게 합니다.
+                effect = new javafx.scene.effect.DropShadow(30, javafx.scene.paint.Color.CYAN);
             }
+
+            // B. [상태 표시] 만약 비행기가 '회피(Evade)' 상태라면?
+            if ("Evade".equals(aircraft.getTacticalState())) {
+                // 주인공이든 아니든, 회피 중이면 강렬한 노란색 경고등으로 덮어씁니다.
+                effect = new javafx.scene.effect.DropShadow(30, javafx.scene.paint.Color.YELLOW);
+            }
+
+            // 최종 결정된 효과를 이미지에 적용
+            view.setEffect(effect);
         }
     }
 
     public static void main(String[] args) {
         launch(args);
-    } // 자바 프로그램이 실행될 때 가장 먼저 호출되는 코드
-    // JafaFX애플리케이션을 실행하라는 특수 명령어
+    }
 }

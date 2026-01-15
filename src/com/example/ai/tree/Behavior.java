@@ -1,3 +1,7 @@
+// ==========================
+// Behavior.java
+// ==========================
+
 package com.example.ai.tree;
 
 public abstract class Behavior { // 행동트리의 모든 '규칙'노드가 상속받아야 할 "추상 클래스"를 선언

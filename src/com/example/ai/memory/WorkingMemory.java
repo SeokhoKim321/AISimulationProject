@@ -1,4 +1,6 @@
-// src/com/example/ai/memory/WorkingMemory.java
+// ==========================
+// WorkingMemory.java
+// ==========================
 
 package com.example.ai.memory;
 
@@ -6,7 +8,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class WorkingMemory {
-    public Map<String, MemoryCell> cells = new HashMap<>();
+    public Map<String, MemoryCell> cells = new HashMap<>(); // 셀의 이름을 키로, MemoryCell 객체를 값으로 하는 맵을 생성
 
     public void addCell(MemoryCell cell) {
         this.cells.put(cell.name, cell);
@@ -18,15 +20,21 @@ public class WorkingMemory {
         double r_d = 0.5;   // 시간 경과 시 감쇠(잊히는) 속도
 
         for (MemoryCell cell : this.cells.values()) {
+
+            // [ 핵심 ] 현재 기억 상태를 먼저 가져옴.
+            double currentLevvel = cell.getActivationLevel();
+
             if (cell.name.equals(attendedCellName)) {
-                // 2. 활성도 상승: 논문의 공식(A = 1 - e^(-ra*t))을 적용
-                // 이전 값에 더하는 대신, 새로운 활성도를 직접 계산합니다.
-                // timeStep 동안 집중했을 때 도달하는 활성도를 의미합니다.
-                cell.setActivationLevel(1.0 - Math.exp(-r_a * timeStep));
+                // 1. 활성도 상승(누적)
+                // "남은 공간(1.0 - currentLevel)"에 비례하여 활성도가 증가하도록 수정
+                // 이렇게 해야 1.0을 넘지 않으면서 부드럽게 올라감
+                double increase = (1.0 - currentLevvel) * (1.0 - Math.exp(-r_a * timeStep));
+                cell.setActivationLevel(currentLevvel + increase);
             } else {
-                // 3. 활성도 하락: 기존 로직은 유지하되, 더 빠른 감쇠 계수(r_d)를 적용
+                // 2. 활성도 하락(누적)
+                // 기존 값에서 일정 비율만큼 깎아내림
                 double decayFactor = Math.exp(-r_d * timeStep);
-                cell.setActivationLevel(cell.getActivationLevel() * decayFactor);
+                cell.setActivationLevel(currentLevvel * decayFactor);
             }
         }
     }
