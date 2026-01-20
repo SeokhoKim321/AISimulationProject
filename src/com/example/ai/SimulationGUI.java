@@ -42,7 +42,6 @@ public class SimulationGUI extends Application {
     // "어떤 데이터(이름)"가 "어떤 그래프 시리즈"에 대응되는지 저장하는 맵
     private Map<String, XYChart.Series<Number, Number>> seriesMap = new HashMap<>();
 
-
     private double timeSeconds = 0.0; // 그래프 X축용 시간(초)
 
     private int simulationTime = 0; // 시뮬레이션 내부 프레임 카운트

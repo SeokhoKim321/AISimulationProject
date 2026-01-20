@@ -10,11 +10,11 @@ import java.util.List;
 import java.util.Random;
 
 public class Agent { // 조종사 (Brain)
-    private final WorkingMemory wm;
-    private final Behavior behaviorTree;
-    private final Blackboard blackboard;
+    private final WorkingMemory wm;   // 작업 기억(그래프 그려지는 활성도 저장소)
+    private final Behavior behaviorTree; // 행동 트리 (판단 규칙 집합)
+    private final Blackboard blackboard; // 칠판 ( 데이터 공유 저장소)
     private final Random random;
-    // [수정] 기억 대상에 "Obstacle" 추가
+    // [중요] 조종사가 기억해야할 대상들. 계기판이라도 볼 수 있음.
     private final String[] cellNames = {"ClosestAircraft", "Fuel Level", "Altitude", "Obstacle"};
 
     private Aircraft aircraft; // 내가 조종하는 몸체
@@ -34,7 +34,7 @@ public class Agent { // 조종사 (Brain)
     }
 
 
-    // [수정] update 메소드 수정(장애물 거리 계산 로직 추가)
+    // update 메소드 , 1초에 60번 호출되며, 조종사의 생각 흐름 담당
     public void update(Airspace airspace) {
         // 1. 인식(perceive): 항공기 위협
         Aircraft threat = perceiveThreat(airspace);
@@ -46,6 +46,7 @@ public class Agent { // 조종사 (Brain)
         if (airspace.getObstacles() != null) {
             for (Obstacle obs : airspace.getObstacles()) {
                 double dist = obs.getDistance(aircraft.getX(), aircraft.getY());
+                // 가장 가까운 놈만 기억한다.
                 if (dist < minObstacleDist) minObstacleDist = dist;
             }
         }
@@ -105,10 +106,8 @@ public class Agent { // 조종사 (Brain)
     }
 
 
-
-
     // =========================================================
-    // [핵심 논문 로직] 주의(Attention) 모델 수정
+    // [핵심 논문 로직] 주의(Attention) 모델
     // 빌딩이 가까우면 시선이 빌딩에 쏠려, 적기를 못 보게 만듦
     // =========================================================
     private String getNextFocus() {
@@ -124,7 +123,7 @@ public class Agent { // 조종사 (Brain)
         // --- [시나리오 로직] ---
 
         // A. [위험 구역] 빌딩이 너무 가깝다! (150px 이내) -> "Cognitive Tunneling" 발생
-        // 조종사는 충돌을 피하기 위해 본능적으로 건물만 쳐다봅니다.
+        // 조종사는 충돌을 피하기 위해 본능적으로 건물만 쳐다봄
         if (distToObstacle < 150.0) {
             // 80% 확률로 장애물 확인 (생존 본능)
             if (roll < 0.80) return "Obstacle";
