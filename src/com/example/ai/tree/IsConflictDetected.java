@@ -8,7 +8,7 @@ import com.sun.source.tree.UsesTree;
 
 public class IsConflictDetected extends Behavior {
     private final double safetyBubble; // 충돌을 피해야 할 최소 안전 거리
-    private final double activationThreshold = 0.996; // [설정] 인지 임계값 (이 값보다 커야 '보인다'고 판단)
+    private final double activationThreshold = 0.7; // 인지 임계값 (이 값보다 커야 '보인다'고 판단)
 
     public IsConflictDetected(String name, double range) {
         super(name);

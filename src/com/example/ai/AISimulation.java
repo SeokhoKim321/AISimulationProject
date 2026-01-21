@@ -1,92 +1,139 @@
-// ==========================
-// AiSimulation.java
-// ==========================
-
 package com.example.ai;
 
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 
 public class AISimulation {
 
-    // (참고: 이 파일은 이제 SimulationGUI와 별도로, 데이터만 뽑기 위한 파일입니다)
+    // 실험 설정
+    private static final int TOTAL_RUNS = 100;
+    private static final int MAX_FRAMES = 2500;
+    private static final double CRASH_THRESHOLD = 30.0;
+    private static final double NMAC_THRESHOLD = 100.0;
 
-    public static void main(String[] args) throws IOException {
-        // 1. 환경과 항공기 목록 생성
-        Airspace airspace = new Airspace();
+    // [New] 결과를 저장할 성적표 클래스 (Inner Class)
+    static class SimulationResult {
+        String environment;
+        int crashCount;
+        int nmacCount;
+        int safeCount;
+        double avgMinDist;
 
-        // 2. '몸체' 와 '두뇌'를 담을 리스트 각각 생성
-        List<Aircraft> allAircrafts = new ArrayList<>();
-        List<Agent> allAgents = new ArrayList<>();
-
-        // 3. 항공기(몸체)와 조종사(두뇌)를 생성하고 연결
-
-        // 항공기 1(몸체) 생성 및 목적지 설정
-        Aircraft aircraft1 = new Aircraft(100.0, 100.0, "blue", 900.0, 700.0);
-
-        //항공기 1(두뇌) 생성 및 aircraft1과 연결
-        Agent agent1 = new Agent(aircraft1);
-
-        // 항공기 2(몸체) 생성 및 목적지 설정
-        Aircraft aircraft2 = new Aircraft(900.0, 700.0, "red", 100.0, 100.0);
-        //항공기 2(두뇌) 생성 및 aircraft과 연결
-        Agent agent2 = new Agent(aircraft2);
-
-        // 4. 각 리스트에 추가
-        allAircrafts.add(aircraft1);
-        allAircrafts.add(aircraft2);
-
-        allAgents.add(agent1);
-        allAgents.add(agent2);
-
-        // 5. 공역에 '몸체'들을 등록
-        airspace.addAgent(aircraft1);
-        airspace.addAgent(aircraft2);
-
-        int totalDuration = 100;
-
-        try (PrintWriter writer = new PrintWriter(new FileWriter("simulation_results_civilian.csv"))) {
-
-            // --- [수정된 부분 2: 헤더 이름 변경] ---
-            writer.println("Time," +
-                    "Aircraft1_Closest,Aircraft1_Fuel,Aircraft1_Altitude,Aircraft1_State," +
-                    "Aircraft2_Closest,Aircraft2_Fuel,Aircraft2_Altitude,Aircraft2_State");
-
-            // 6. 메인 루프 실행
-            for (int t = 0; t < totalDuration; t++) {
-                airspace.update(t); // 환경 업데이트
-
-                // A. 모든 '두뇌'가 먼저 생각함
-                for (Agent agent : allAgents){
-                    agent.update(airspace);
-                }
-                // B. (선택사항) 모든 '몸체'가 움직임
-                // 파일 저장만 할 경우 이 부분은 주석 처리해도 됨)
-                for (Aircraft aircraft : allAircrafts){
-                    aircraft.executeMovement();
-                }
-
-                // 7. 결과 기록
-                writer.printf("%d,%.4f,%.4f,%.4f,%s,%.4f,%.4f,%.4f,%s\n",
-                        t,
-                        // --- [핵심 수정] ---
-                        // 활성도(기억)는 '두뇌'(Agent)에서 가져옴
-                        allAgents.get(0).getActivationLevel("ClosestAircraft"),
-                        allAgents.get(0).getActivationLevel("Fuel Level"),
-                        allAgents.get(0).getActivationLevel("Altitude"),
-                        // 전술 상태는 '몸체'(Aircraft)에서 가져옴
-                        allAircrafts.get(0).getTacticalState(),
-
-                        allAgents.get(1).getActivationLevel("ClosestAircraft"),
-                        allAgents.get(1).getActivationLevel("Fuel Level"),
-                        allAgents.get(1).getActivationLevel("Altitude"),
-                        allAircrafts.get(1).getTacticalState()
-                );
-            }
+        public SimulationResult(String env, int crash, int nmac, int safe, double dist) {
+            this.environment = env;
+            this.crashCount = crash;
+            this.nmacCount = nmac;
+            this.safeCount = safe;
+            this.avgMinDist = dist;
         }
-        System.out.println("민항기 데이터 시뮬레이션 완료! 결과가 simulation_results_civilian.csv 파일에 저장되었습니다.");
+    }
+
+    public static void main(String[] args) {
+        System.out.println(">>> 시뮬레이션 데이터 수집 중... (잠시만 기다려주세요)");
+
+        // 1. [실험 A] 개활지 실행 및 결과 저장 (출력 X)
+        System.out.print("[1/2] 개활지 시뮬레이션 진행 중: ");
+        SimulationResult resultOpen = runBatchSimulation(false);
+        System.out.println(" 완료!");
+
+        // 2. [실험 B] 도심 실행 및 결과 저장 (출력 X)
+        System.out.print("[2/2] 도심 협곡 시뮬레이션 진행 중: ");
+        SimulationResult resultUrban = runBatchSimulation(true);
+        System.out.println(" 완료!");
+
+        // 3. [최종 리포트] 저장된 두 결과를 한 번에 출력 (비교가 쉬워짐)
+        printFinalReport(resultOpen, resultUrban);
+    }
+
+    // 반환 타입을 void -> SimulationResult로 변경
+    private static SimulationResult runBatchSimulation(boolean isUrban) {
+        int crashCount = 0;
+        int nmacCount = 0;
+        int safeCount = 0;
+        double totalMinDist = 0;
+
+        for (int run = 1; run <= TOTAL_RUNS; run++) {
+            Airspace airspace = new Airspace();
+            List<Aircraft> allAircrafts = new ArrayList<>();
+            List<Agent> allAgents = new ArrayList<>();
+
+            if (isUrban) {
+                airspace.addObstacle(new Obstacle(600, 200, 200, 150));
+                airspace.addObstacle(new Obstacle(600, 450, 200, 150));
+            }
+
+            Aircraft a1 = new Aircraft(50.0, 400.0, "blue", 1350.0, 400.0);
+            Agent ag1 = new Agent(a1);
+
+            Aircraft a2 = new Aircraft(1350.0, 440.0, "red", 50.0, 360.0);
+            Agent ag2 = new Agent(a2);
+
+            allAircrafts.add(a1); allAircrafts.add(a2);
+            allAgents.add(ag1);   allAgents.add(ag2);
+            airspace.addAgent(a1); airspace.addAgent(a2);
+
+            double minDistInThisRun = Double.MAX_VALUE;
+
+            for (int t = 0; t < MAX_FRAMES; t++) {
+                airspace.update(t);
+                for (Agent agent : allAgents) agent.update(airspace);
+                for (Aircraft aircraft : allAircrafts) aircraft.executeMovement();
+
+                double dist = getDistance(a1, a2);
+                if (dist < minDistInThisRun) minDistInThisRun = dist;
+                if (dist < CRASH_THRESHOLD) break;
+            }
+
+            if (minDistInThisRun < CRASH_THRESHOLD) crashCount++;
+            else if (minDistInThisRun < NMAC_THRESHOLD) nmacCount++;
+            else safeCount++;
+
+            totalMinDist += minDistInThisRun;
+
+            // 진행률 표시 (점 찍기)
+            if (run % 10 == 0) System.out.print(".");
+        }
+
+        // 결과 객체 생성 및 반환
+        return new SimulationResult(
+                isUrban ? "도심 협곡 (빌딩 O)" : "개활지 (장애물 X)",
+                crashCount, nmacCount, safeCount, (totalMinDist / TOTAL_RUNS)
+        );
+    }
+
+    // 최종 결과 출력용 메서드
+    private static void printFinalReport(SimulationResult r1, SimulationResult r2) {
+        System.out.println("\n\n");
+        System.out.println("================================================================");
+        System.out.println("                  [최종 시뮬레이션 비교 리포트]                  ");
+        System.out.println("================================================================");
+
+        // 헤더 출력
+        System.out.printf("%-20s | %-10s | %-10s | %-10s | %-10s\n",
+                "환경(Environment)", "충돌(Crash)", "준사고(NMAC)", "안전(Safe)", "평균거리(px)");
+        System.out.println("----------------------------------------------------------------");
+
+        // 개활지 결과 출력
+        System.out.printf("%-20s | %3d회(%3d%%) | %3d회(%3d%%) | %3d회(%3d%%) | %8.2f\n",
+                r1.environment,
+                r1.crashCount, r1.crashCount,
+                r1.nmacCount, r1.nmacCount,
+                r1.safeCount, r1.safeCount,
+                r1.avgMinDist);
+
+        // 도심 결과 출력
+        System.out.printf("%-20s | %3d회(%3d%%) | %3d회(%3d%%) | %3d회(%3d%%) | %8.2f\n",
+                r2.environment,
+                r2.crashCount, r2.crashCount,
+                r2.nmacCount, r2.nmacCount,
+                r2.safeCount, r2.safeCount,
+                r2.avgMinDist);
+
+        System.out.println("================================================================");
+        System.out.println("개활지에서는 '안전' 비율이 높고, 도심에서는 '준사고' 비율이 높아야 정상");
+    }
+
+    private static double getDistance(Aircraft a1, Aircraft a2) {
+        return Math.sqrt(Math.pow(a1.getX() - a2.getX(), 2) + Math.pow(a1.getY() - a2.getY(), 2));
     }
 }

@@ -39,6 +39,8 @@ public class Agent { // 조종사 (Brain)
         // 1. 인식(perceive): 항공기 위협
         Aircraft threat = perceiveThreat(airspace);
 
+
+
         // 2. [추가] 인식: 장애물 위협 측정
         double minObstacleDist = Double.MAX_VALUE;
         // 안전장치: 장애물 리스트가 null이 아닐 때만 계산
@@ -60,11 +62,26 @@ public class Agent { // 조종사 (Brain)
 
         // 4. 작업 기억 업데이트(선택된 대상만 활성도 올라감)
         this.wm.update(focusTarget, 0.016); // 0.016은 약 1프레임(60fps)
+        // =================================================================
+        // [★수정된 부분] Step 5: 변수 선언을 먼저 해야 함!
+        // =================================================================
+
+        // 1) 먼저 변수(double threatActivation)를 만들어서 값을 저장합니다.
+        double threatActivation = getActivationLevel("ClosestAircraft");
 
         // 5. 블랙보드 기록 (그래프용 데이터)
         // 적기(ClosestAircraft)에 대한 활성도가 뚝 떨어지는지 확인하는 핵심 지표
         this.blackboard.set("threatActivation", getActivationLevel("ClosestAircraft"));
-
+        // =================================================================
+        // [★ 핵심] 지각적 맹 (Perceptual Blindness) 판정
+        // 기억이 0.2(20%) 미만으로 떨어지면, 센서가 탐지했어도 "못 본 척" 한다.
+        // =================================================================
+        if (threatActivation < 0.2) {
+            // 뇌가 정보를 차단해버림
+            this.blackboard.set("closestAircraftDistance", Double.MAX_VALUE);
+            threat = null; // 위협 객체를 null로 만듦 -> 회피 로직 작동 안 함
+        }
+        // =================================================================
 
         // 6. 의사결정(행동 트리 실행)
         // threatActivation이 낮으면 '위험'을 인지 못하고 Failure 반환
@@ -111,49 +128,46 @@ public class Agent { // 조종사 (Brain)
     // 빌딩이 가까우면 시선이 빌딩에 쏠려, 적기를 못 보게 만듦
     // =========================================================
     private String getNextFocus() {
-        // 1. 가장 가까운 장애물(빌딩)과의 거리 계산
         double distToObstacle = getClosestObstacleDistance();
-
-        // 2. 가장 가까운 항공기와의 거리 가져오기
+        // update()에서 넣어준 '진짜 거리'를 가져옴
         Object distObj = this.blackboard.get("closestAircraftDistance");
         double distToThreat = (distObj != null) ? (Double) distObj : Double.MAX_VALUE;
 
-        double roll = random.nextDouble(); // 0.0 ~ 1.0 (주사위 굴리기)
+        double roll = random.nextDouble();
 
-        // --- [시나리오 로직] ---
-
-        // A. [위험 구역] 빌딩이 너무 가깝다! (150px 이내) -> "Cognitive Tunneling" 발생
-        // 조종사는 충돌을 피하기 위해 본능적으로 건물만 쳐다봄
-        if (distToObstacle < 150.0) {
-            // 80% 확률로 장애물 확인 (생존 본능)
-            if (roll < 0.80) return "Obstacle";
-                // 15% 확률로 고도 확인
-            else if (roll < 0.95) return "Altitude";
-                // ★ 중요: 적기(ClosestAircraft)를 확인할 확률이 5%로 급감함 (놓칠 확률 매우 높음)
-            else return "ClosestAircraft";
+        // 1. [긴급 경보] 250px 초근접 (생존 본능)
+        // 도심이든 개활지든 당장 다른 항공기와 부딪치게 생겼으면 이것부터 봄
+        if (distToThreat < 250.0) {
+            if (roll < 0.60) return "ClosestAircraft";
+            else if (roll < 0.90) return "Obstacle";
+            else return "Altitude";
         }
 
-        // B. [주의 분산] 빌딩 숲 사이를 비행 중 (150 ~ 300px) -> 시선 분산
-        else if (distToObstacle < 300.0) {
-            // 건물도 신경 쓰이고 적기도 신경 쓰임 (멀티태스킹 부하)
-            if (roll < 0.40) return "Obstacle";      // 40% 건물 감시
-            else if (roll < 0.70) return "ClosestAircraft"; // 30% 적기 감시
-            else return "Altitude";                  // 30% 계기판
+        // 2. [도심 협곡 로직] 장애물이 있을 때만 작동
+        else if (distToObstacle < 300.0) { // 터널링
+            if (roll < 0.85) return "Obstacle";
+            else return "Altitude";
+        }
+        else if (distToObstacle < 500.0) { // 주의 분산
+            if (roll < 0.40) return "Obstacle";
+            else if (roll < 0.70) return "ClosestAircraft"; // 가끔 봄
+            else return "Altitude";
         }
 
-        // C. [개활지] 주변에 빌딩 없음 -> 정상적인 경계 비행
+        // 3. [개활지 로직] 장애물 있는 상황과 없는 상황 비교를 위함
         else {
-            // 적기가 가까우면(200px 이내) 적기에 집중
-            if (distToThreat < 200.0) {
-                if (roll < 0.90) return "ClosestAircraft";
+            // 장애물이 없으면 시야가 트여 있으므로 1000px 밖에서 미리 발견해야 함
+            if (distToThreat < 1000.0) {
+                // 미리 발견 -> 기억 1.0 충전 -> 400px 행동 트리 발동 -> 안전 거리(Safe) 확보
+                if (roll < 0.95) return "ClosestAircraft";
                 else return "Altitude";
             }
-            // 평시 순항 (Instrument Scan)
-            else {
-                if (roll < 0.33) return "ClosestAircraft";
-                else if (roll < 0.66) return "Altitude";
-                else return "Fuel Level";
-            }
+
+            // 적기가 아주 멀리 있을 때 (평시 비행)
+            if (roll < 0.25) return "ClosestAircraft";
+            else if (roll < 0.50) return "Obstacle";
+            else if (roll < 0.75) return "Altitude";
+            else return "Fuel Level";
         }
     }
 
@@ -268,13 +282,13 @@ public class Agent { // 조종사 (Brain)
         Sequence stopEvasion = new Sequence("Stop");
         stopEvasion.addChildren(
                 new IsInState("Evading?", "Evade"),
-                new IsNot(new IsConflictDetected("Safe?", 100.0)),
+                new IsNot(new IsConflictDetected("Safe?", 500.0)),
                 new SetTacticalState("Cruise", "Cruising")
         );
 
         Sequence startEvasion = new Sequence("Start");
         startEvasion.addChildren(
-                new IsConflictDetected("Danger?", 70.0),
+                new IsConflictDetected("Danger?", 400.0),
                 new SetTacticalState("Evade", "Evade")
         );
 

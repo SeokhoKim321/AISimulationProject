@@ -219,8 +219,8 @@ public class SimulationGUI extends Application {
 
         // [도심 협곡 시나리오]  장애물 삭제시 여기부터
         // 파란 비행기 경로상에 빌딩 배치
-        Obstacle b1 = new Obstacle(400, 300, 100, 100); // (x, y, w, h)
-        Obstacle b2 = new Obstacle(600, 500, 100, 200);
+        Obstacle b1 = new Obstacle(600, 200, 200, 150); // (x, y, w, h)
+        Obstacle b2 = new Obstacle(600, 450, 200, 150);
 
         airspace.addObstacle(b1);
         airspace.addObstacle(b2);
@@ -257,14 +257,18 @@ public class SimulationGUI extends Application {
         // 장애물 삭제시 여기까지
 
         // 1번 항공기
-        Aircraft aircraft1 = new Aircraft(100, 100, "blue", 1200, 1000);
+        Aircraft aircraft1 = new Aircraft(50, 400, "blue", 1350, 400);
         Agent agent1 = new Agent(aircraft1);
         // 2번 항공기
-        Aircraft aircraft2 = new Aircraft(1300, 800, "red",  100, 200);
+        Aircraft aircraft2 = new Aircraft(1350, 440, "red",  50, 360);
         Agent agent2 = new Agent(aircraft2);
         // 3번 항공기
-        Aircraft aircraft3 = new Aircraft(100, 800, "red", 1300, 100);
+        Aircraft aircraft3 = new Aircraft(700, 100, "red", 700, 700);
         Agent agent3 = new Agent(aircraft3);
+
+
+
+
 
         allAircrafts.add(aircraft1);
         allAircrafts.add(aircraft2);

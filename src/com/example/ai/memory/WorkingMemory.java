@@ -17,7 +17,7 @@ public class WorkingMemory {
     public void update(String attendedCellName, double timeStep) {
         // 1. 논문에 명시된 계수 값으로 변경
         double r_a = 7.489; // 주의 집중 시 활성화 속도
-        double r_d = 0.5;   // 시간 경과 시 감쇠(잊히는) 속도
+        double r_d = 5.0;   // 시간 경과 시 감쇠(잊히는) 속도
 
         for (MemoryCell cell : this.cells.values()) {
 
