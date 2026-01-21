@@ -110,7 +110,7 @@ public class AISimulation {
 
         // 헤더 출력
         System.out.printf("%-20s | %-10s | %-10s | %-10s | %-10s\n",
-                "환경(Environment)", "충돌(Crash)", "준사고(NMAC)", "안전(Safe)", "평균거리(px)");
+                "환경(Environment)", "충돌(Crash)", "준사고(NMAC)", "안전(Safe)", "평균최소근접거리(px)");
         System.out.println("----------------------------------------------------------------");
 
         // 개활지 결과 출력

@@ -143,14 +143,23 @@ public class Agent { // 조종사 (Brain)
             else return "Altitude";
         }
 
-        // 2. [도심 협곡 로직] 장애물이 있을 때만 작동
-        else if (distToObstacle < 300.0) { // 터널링
-            if (roll < 0.85) return "Obstacle";
+        // =========================================================
+        // 2. [도심 협곡] - 여기가 수정 포인트!
+        // 기존: 85% 빌딩, 15% 고도 (적기 0% -> 무조건 사고)
+        // 수정: 70% 빌딩, 20% 적기, 10% 고도 (가끔 적기를 봐서 생존 가능성 열어둠)
+        // =========================================================
+
+        // A. 터널링 심화 (300px 이내)
+        else if (distToObstacle < 300.0) {
+            if (roll < 0.70) return "Obstacle";       // 70%는 여전히 빌딩에 집착 (위험)
+            else if (roll < 0.85) return "ClosestAircraft"; // ★ 15% 확률로 적기를 힐끔 봄! (생존 열쇠)
             else return "Altitude";
         }
-        else if (distToObstacle < 500.0) { // 주의 분산
+
+        // B. 주의 분산 (500px 이내)
+        else if (distToObstacle < 500.0) {
             if (roll < 0.40) return "Obstacle";
-            else if (roll < 0.70) return "ClosestAircraft"; // 가끔 봄
+            else if (roll < 0.65) return "ClosestAircraft"; // 여기도 25% 정도로 적기 확인 기회 부여
             else return "Altitude";
         }
 

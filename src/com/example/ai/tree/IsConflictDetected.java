@@ -17,14 +17,14 @@ public class IsConflictDetected extends Behavior {
 
     @Override
     public Status update(Blackboard blackboard) {
-        // 1. 물리적 거리 가져오기
+        // 1. 물리적 거리 가져오기(거리가 가까운가?)
         Object distanceObj = blackboard.get("closestAircraftDistance");
         if (distanceObj == null) {
             return Status.FAILURE; // 주변에 다른 항공기 없음
         }
         double distance = (Double) distanceObj;
 
-        // 2. [핵심] 인지적 활성도 가져오기
+        // 2. [핵심] 인지적 활성도 가져오기(내 기억이 선명한가?)
         Object activationObj = blackboard.get("threatActivation");
         double activation = (activationObj != null) ? (Double) activationObj : 0.0;
 
