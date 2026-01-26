@@ -30,20 +30,24 @@ public class IsConflictDetected extends Behavior {
 
         // --- [디버깅 코드 추가] ---
         // 거리가 가까울 때(예: 150 이내) 활성도가 얼마인지 콘솔에 출력합니다.
-        if (distance < 150.0) {
+        if (distance < this.safetyBubble) {
             System.out.println("거리: " + (int)distance + " / 활성도: " + String.format("%.4f", activation) + " / 기준: " + activationThreshold);
         }
         // -----------------------
 
         // 3. 판단 : 거리가 가깝고 내 기억이 선명해야(Activation > 0.5) " 위협을 감지함
         if (distance < this.safetyBubble) {
-            if (activation > this.activationThreshold) {
-                return Status.SUCCESS; // "위험해"! 인지 성공
-            } else {
-                // 거리는 가깝지만, 딴짓하느라 못봄
-                System.out.println("위험하지만 인지하지 못함! (활성도: " + String.format("%.2f", activation) + ")");
-                return Status.FAILURE;
 
+            if (activation > this.activationThreshold) {
+                // [정상 감지] 위험하고, 눈에도 보임 -> 회피 시작
+                System.out.println(">>> 위협 감지 성공! (거리: " + (int)distance + "m)");
+                return Status.SUCCESS;
+            } else {
+                // [인지 터널링 발생]
+                // 물리적으로는 들이받기 직전인데, activation이 낮아서 '안전하다(Failure)'고 착각함
+                // 이 로그가 뜨면 논문 시나리오가 제대로 작동하고 있는 것임
+                System.out.println("!!! 위험하지만 못 봄 (터널링) !!! 거리: " + (int)distance + "m, 활성도: " + String.format("%.2f", activation));
+                return Status.FAILURE;
             }
         }
 

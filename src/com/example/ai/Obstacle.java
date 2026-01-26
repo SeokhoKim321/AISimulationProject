@@ -1,8 +1,12 @@
+// ==========================
+// Obstacle.java
+// ==========================
+
 package com.example.ai;
 
-import javafx.scene.shape.Rectangle;
-
 public class Obstacle {
+    // 모든 단위는 '미터(m)'입니다.
+    // 위치는 사각형의 '정중앙(Center)' 기준입니다.
     private double x, y;
     private double width, height;
 
@@ -13,22 +17,13 @@ public class Obstacle {
         this.height = height;
     }
 
-    // 충돌 체크 로직 (AABB 방식: 사각형끼리 겹치는지 확인)
-    public boolean checkCollision(double agentX, double agentY, double agentSize) {
-        return (agentX < x + width &&
-                agentX + agentSize > x &&
-                agentY < y + height &&
-                agentY + agentSize > y);
+    // 에이전트와의 거리 계산 (유클리드 거리)
+    public double getDistance(double targetX, double targetY) {
+        // 이미 x, y가 중심점이므로 바로 계산
+        return Math.sqrt(Math.pow(x - targetX, 2) + Math.pow(y - targetY, 2));
     }
 
-    // 거리 계산 (에이전트와 빌딩 중심점 간의 거리)
-    public double getDistance(double agentX, double agentY) {
-        double centerX = x + width / 2;
-        double centerY = y + height / 2;
-        return Math.sqrt(Math.pow(centerX - agentX, 2) + Math.pow(centerY - agentY, 2));
-    }
-
-    // Getter
+    // Getters
     public double getX() { return x; }
     public double getY() { return y; }
     public double getWidth() { return width; }
