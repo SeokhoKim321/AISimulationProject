@@ -9,7 +9,7 @@ public class AISimulation {
 
     // 실험 설정 상수
     private static final int TOTAL_RUNS = 100;
-    private static final int MAX_FRAMES = 2500;
+    private static final int MAX_FRAMES = 3000;
     private static final double CRASH_THRESHOLD = 30.0;     // 충돌 판정 거리 (30m)
     private static final double NMAC_THRESHOLD = 100.0;     // 준사고 판정 거리 (100m)
 
@@ -33,12 +33,12 @@ public class AISimulation {
     public static void main(String[] args) {
         System.out.println(">>> 시뮬레이션 데이터 수집 중... (잠시만 기다려주세요)");
 
-        // 1. [실험 A] 개활지 실행
+        // 1. [실험 A] 개활지 실행(장애물 없음)
         System.out.print("[1/2] 개활지 시뮬레이션 진행 중: ");
         SimulationResult resultOpen = runBatchSimulation(false);
         System.out.println(" 완료!");
 
-        // 2. [실험 B] 도심 실행
+        // 2. [실험 B] 도심 실행(장애물 있음)
         System.out.print("[2/2] 도심 협곡 시뮬레이션 진행 중: ");
         SimulationResult resultUrban = runBatchSimulation(true);
         System.out.println(" 완료!");
@@ -53,65 +53,76 @@ public class AISimulation {
         int safeCount = 0;
         double totalMinDist = 0;
 
+        // [중요] GUI와 동일한 투영기 설정 (환경 동기화)
+        LambertProjection projector = new LambertProjection(37.4500, 126.6530, 30.0, 60.0);
+        double fixedLat = 37.4520; // 시나리오 위도
+
         for (int run = 1; run <= TOTAL_RUNS; run++) {
             Airspace airspace = new Airspace();
             List<Aircraft> allAircrafts = new ArrayList<>();
             List<Agent> allAgents = new ArrayList<>();
 
-            // 1. 장애물 배치 (도심일 경우)
+            // 1. 장애물 배치 (GUI와 동일한 로직 적용)
             if (isUrban) {
-                // (미터 단위 좌표로 장애물 생성)
-                airspace.addObstacle(new Obstacle(600, 200, 200, 150));
-                airspace.addObstacle(new Obstacle(600, 450, 200, 150));
+                // GUI와 똑같이 중앙에 장애물 배치
+                Point2D.Double obsPos = projector.project(fixedLat, 126.6700);
+
+                // 위치 미세 조정이 필요하면 GUI와 똑같이 적용하세요 (예: obsPos.x - 100.0 등)
+                // 여기서는 기본 생성 로직을 따릅니다.
+                airspace.addObstacle(new Obstacle(obsPos.x, obsPos.y, 200.0, 150.0));
             }
 
-            // 2. 항공기 생성 (여기가 수정된 부분!)
-            // [오류 해결] 옛날 생성자 대신 새 생성자(x, y, speed, angle) 사용
-
+            // 2. 항공기 생성 (GUI와 동일한 좌표 계산)
             // 파란 비행기 (서 -> 동)
-            Aircraft a1 = new Aircraft(50.0, 400.0, 40.0, 0.0);
-            a1.setDestination(1350.0, 400.0);
-            a1.setCommandTarget(1350.0, 400.0);
+            Point2D.Double start1 = projector.project(fixedLat, 126.6660);
+            Point2D.Double dest1  = projector.project(fixedLat, 126.6800);
+
+            Aircraft a1 = new Aircraft(start1.x, start1.y, 80.0, 0.0);
+            a1.setDestination(dest1.x, dest1.y);
+            a1.setCommandTarget(dest1.x, dest1.y);
             a1.setTeam("blue");
             Agent ag1 = new Agent(a1);
 
             // 빨간 비행기 (동 -> 서)
-            Aircraft a2 = new Aircraft(1350.0, 440.0, 40.0, 180.0);
-            a2.setDestination(50.0, 440.0);
-            a2.setCommandTarget(50.0, 440.0);
+            Point2D.Double start2 = projector.project(fixedLat, 126.6740);
+            Point2D.Double dest2  = projector.project(fixedLat, 126.6600);
+
+            Aircraft a2 = new Aircraft(start2.x, start2.y, 80.0, 180.0);
+            a2.setDestination(dest2.x, dest2.y);
+            a2.setCommandTarget(dest2.x, dest2.y);
             a2.setTeam("red");
             Agent ag2 = new Agent(a2);
 
-            // 리스트 등록
+            // 등록
             allAircrafts.add(a1); allAircrafts.add(a2);
             allAgents.add(ag1);   allAgents.add(ag2);
             airspace.addAgent(a1); airspace.addAgent(a2);
 
-            // 3. 시뮬레이션 루프 (프레임 단위 실행)
+            // 3. 시뮬레이션 루프
             double minDistInThisRun = Double.MAX_VALUE;
 
             for (int t = 0; t < MAX_FRAMES; t++) {
-                // 업데이트
+                // 로직 업데이트 (GUI 그리기 빼고 순수 계산만)
                 airspace.update(0.016);
                 for (Agent agent : allAgents) agent.update(airspace);
                 for (Aircraft aircraft : allAircrafts) aircraft.executeMovement(0.016);
 
-                // 최소 거리 측정
+                // 거리 측정
                 double dist = getDistance(a1, a2);
                 if (dist < minDistInThisRun) minDistInThisRun = dist;
 
-                // 충돌 시 조기 종료
+                // 충돌 시 해당 런 종료
                 if (dist < CRASH_THRESHOLD) break;
             }
 
-            // 4. 결과 기록
+            // 통계 집계
             if (minDistInThisRun < CRASH_THRESHOLD) crashCount++;
             else if (minDistInThisRun < NMAC_THRESHOLD) nmacCount++;
             else safeCount++;
 
             totalMinDist += minDistInThisRun;
 
-            // 진행률 표시
+            // 진행률 (10%마다 점 찍기)
             if (run % 10 == 0) System.out.print(".");
         }
 
