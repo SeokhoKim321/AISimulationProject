@@ -125,8 +125,8 @@ public class SimulationGUI extends Application {
         double fixedLat = 37.4500;
 
         // 이 변수는 장애물의 위도
-        double obstacleLat = 37.4500; // 원하는 위치로 변경해 보세요
-        Point2D.Double obsPos = projector.project(obstacleLat, 126.6700);
+        double obstacleLat = 37.4510;     // 숫자를 올리면 북쪽으로 이동함
+        Point2D.Double obsPos = projector.project(obstacleLat, 126.6620); // 숫자를 올리면 동쪽으로 이동함
 
 
         Obstacle centerBuilding = new Obstacle(obsPos.x - 100.0, obsPos.y - 75.0, 200.0, 150.0);
@@ -135,7 +135,7 @@ public class SimulationGUI extends Application {
 
         // 2. 파란 비행기 (서 -> 동)
         // 장애물보다 서쪽 600m 지점
-        Point2D.Double start1 = projector.project(fixedLat, 126.6660);
+        Point2D.Double start1 = projector.project(fixedLat, 126.6480);
         Point2D.Double dest1  = projector.project(fixedLat, 126.6800);
 
         // 속도 40m/s, 각도 0도(동쪽)
@@ -148,7 +148,7 @@ public class SimulationGUI extends Application {
         // 3. 빨간 비행기 (동 -> 서)
         // 장애물보다 동쪽 600m 지점
         Point2D.Double start2 = projector.project(fixedLat, 126.6740);
-        Point2D.Double dest2  = projector.project(fixedLat, 126.6600);
+        Point2D.Double dest2  = projector.project(fixedLat, 126.6400);
 
         // 속도 40m/s, 각도 180도(서쪽)
         Aircraft a2 = new Aircraft(start2.x, start2.y, 80.0, 180.0);

@@ -55,7 +55,7 @@ public class AISimulation {
 
         // [중요] GUI와 동일한 투영기 설정 (환경 동기화)
         LambertProjection projector = new LambertProjection(37.4500, 126.6530, 30.0, 60.0);
-        double fixedLat = 37.4520; // 시나리오 위도
+        double fixedLat = 37.4500; // 항로 위도
 
         for (int run = 1; run <= TOTAL_RUNS; run++) {
             Airspace airspace = new Airspace();
@@ -64,12 +64,18 @@ public class AISimulation {
 
             // 1. 장애물 배치 (GUI와 동일한 로직 적용)
             if (isUrban) {
+                // 장애물 위도/경도 설정
+                double obstacleLat = 37.4510;
                 // GUI와 똑같이 중앙에 장애물 배치
-                Point2D.Double obsPos = projector.project(fixedLat, 126.6700);
+                Point2D.Double obsPos = projector.project(obstacleLat, 126.6700);
 
-                // 위치 미세 조정이 필요하면 GUI와 똑같이 적용하세요 (예: obsPos.x - 100.0 등)
-                // 여기서는 기본 생성 로직을 따릅니다.
-                airspace.addObstacle(new Obstacle(obsPos.x, obsPos.y, 200.0, 150.0));
+                // SimulationGUI와 똑같이 중심 보정 (-100, -75) 적용
+                Obstacle centerBuilding = new Obstacle(
+                        obsPos.x - 100.0,
+                        obsPos.y - 75.0,
+                        200.0, 150.0
+                );
+                airspace.addObstacle(centerBuilding);
             }
 
             // 2. 항공기 생성 (GUI와 동일한 좌표 계산)
@@ -77,7 +83,7 @@ public class AISimulation {
             Point2D.Double start1 = projector.project(fixedLat, 126.6660);
             Point2D.Double dest1  = projector.project(fixedLat, 126.6800);
 
-            Aircraft a1 = new Aircraft(start1.x, start1.y, 80.0, 0.0);
+            Aircraft a1 = new Aircraft(start1.x, start1.y, 40.0, 0.0);
             a1.setDestination(dest1.x, dest1.y);
             a1.setCommandTarget(dest1.x, dest1.y);
             a1.setTeam("blue");
@@ -87,7 +93,7 @@ public class AISimulation {
             Point2D.Double start2 = projector.project(fixedLat, 126.6740);
             Point2D.Double dest2  = projector.project(fixedLat, 126.6600);
 
-            Aircraft a2 = new Aircraft(start2.x, start2.y, 80.0, 180.0);
+            Aircraft a2 = new Aircraft(start2.x, start2.y, 40.0, 180.0);
             a2.setDestination(dest2.x, dest2.y);
             a2.setCommandTarget(dest2.x, dest2.y);
             a2.setTeam("red");

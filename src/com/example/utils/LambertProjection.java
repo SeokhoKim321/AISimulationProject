@@ -1,3 +1,7 @@
+// ==========================
+// LambertProjection.java
+// ==========================
+
 package com.example.utils;
 
 import java.awt.geom.Point2D;

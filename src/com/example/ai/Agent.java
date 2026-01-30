@@ -150,19 +150,30 @@ public class Agent {
         double distToThreat = (distObj != null) ? (Double) distObj : Double.MAX_VALUE;
         double roll = random.nextDouble();
 
-        // [확률 조정] 논문 시나리오에 맞게 튜닝
+        // 1. [긴급] 초근접 상황 (200m 이내)
         if (distToThreat < 200.0) { // 200m 이내 (긴급)
             if (roll < 0.90) return "ClosestAircraft"; // 90% 확률로 적기 확인
             else return "Obstacle";
-        } else if (distToObstacle < 500.0) { // 장애물 근접 : 500m 이내 (터널링 유발)
-            if (roll < 0.70) return "Obstacle";       // 70%는 장애물만 봄
-            else if (roll < 0.85) return "ClosestAircraft";
+        }
+        // 2. [터널링] 장애물 회피 구간 (장애물과의 거리 500m 이내)
+        else if (distToObstacle < 500.0) { // 장애물 근접 : 500m 이내 (터널링 유발)
+            if (roll < 0.85) return "Obstacle";       // 70%는 장애물만 봄
+            else if (roll < 0.95) return "ClosestAircraft";
             else return "Altitude";
-        } else {
-            if (distToThreat < 1000.0) {
-                if (roll < 0.60) return "ClosestAircraft";
-                else return "Obstacle";
+        }
+        // 3. [보통] 다른 항공기와 1000m 거리 이내 상황
+        else {
+            if (distToThreat < 2000.0) {
+                if (roll < 0.40){
+                    return "ClosestAircraft";
+            } else if (roll < 0.60) {
+                return "Obstacle";
+            } else if (roll < 0.80) {
+                return "Altitude";
+            } else{
+                return "Fuel Level";
             }
+        }
             return "Altitude";
         }
     }

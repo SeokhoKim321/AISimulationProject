@@ -1,9 +1,13 @@
+// ==========================
+// CoordinateConverter.java
+// ==========================
+
 package com.example.utils;
 
 /**
  * [화면 로직] 미터(World) <-> 픽셀(Screen) 변환 도구
- * - 오직 SimulationGUI(View)에서만 사용해야 함.
- * - Agent(Logic) 내부에서는 절대 사용 금지!
+ * - 오직 SimulationGUI(View)에서만 사용됨.
+ * - Agent(Logic) 내부에서는 사용 금지
  */
 public class CoordinateConverter {
 
