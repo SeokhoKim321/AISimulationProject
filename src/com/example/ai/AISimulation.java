@@ -73,7 +73,7 @@ public class AISimulation {
                 Obstacle centerBuilding = new Obstacle(
                         obsPos.x - 100.0,
                         obsPos.y - 75.0,
-                        200.0, 150.0
+                        100.0, 150.0
                 );
                 airspace.addObstacle(centerBuilding);
             }
@@ -139,7 +139,10 @@ public class AISimulation {
     }
 
     private static double getDistance(Aircraft a1, Aircraft a2) {
-        return Math.sqrt(Math.pow(a1.getX() - a2.getX(), 2) + Math.pow(a1.getY() - a2.getY(), 2));
+        return Math.sqrt(
+                Math.pow(a1.getX() - a2.getX(), 2) + Math.pow(a1.getY() - a2.getY(), 2)
+                        + Math.pow(a1.getZ() - a2.getZ(), 2)  // 고도 차이 추가!
+        );
     }
 
     private static void printFinalReport(SimulationResult r1, SimulationResult r2) {

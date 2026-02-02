@@ -144,7 +144,7 @@ public class SimulationGUI extends Application {
         Point2D.Double dest1  = projector.project(fixedLat, 126.6800);
 
         // 속도 40m/s, 각도 0도(동쪽)  고도(z) 150 추가
-        Aircraft a1 = new Aircraft(start1.x, start1.y, 150.0, 40.0, 0.0);
+        Aircraft a1 = new Aircraft(start1.x, start1.y, 150.0, 80.0, 0.0);
         a1.setDestination(dest1.x, dest1.y); // Agent 참고용 최종 목적지
         a1.setCommandTarget(dest1.x, dest1.y); // 초기 명령
         a1.setTeam("blue");
@@ -156,7 +156,7 @@ public class SimulationGUI extends Application {
         Point2D.Double dest2  = projector.project(fixedLat, 126.6400);
 
         // 속도 40m/s, 각도 180도(서쪽)  고도 (z) 150 추가
-        Aircraft a2 = new Aircraft(start2.x, start2.y, 150.0, 40.0, 180.0);
+        Aircraft a2 = new Aircraft(start2.x, start2.y, 150.0, 80.0, 180.0);
         a2.setDestination(dest2.x, dest2.y);
         a2.setCommandTarget(dest2.x, dest2.y);
         a2.setTeam("red");
