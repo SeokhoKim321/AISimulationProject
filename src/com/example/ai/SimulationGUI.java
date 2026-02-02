@@ -11,6 +11,7 @@ import javafx.scene.chart.LineChart;
 import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
 import javafx.scene.control.Button;
+import javafx.scene.control.Label; // [추가] 텍스트 표시용
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
@@ -18,7 +19,9 @@ import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
-import javafx.scene.shape.Rectangle; // [중요] 이거 꼭 있어야 함
+import javafx.scene.shape.Circle; // [변경] 사각형 -> 원
+import javafx.scene.text.Font;    // [추가] 폰트
+import javafx.scene.text.Text;    // [추가] 텍스트
 import javafx.stage.Stage;
 
 import java.awt.geom.Point2D;
@@ -34,6 +37,7 @@ public class SimulationGUI extends Application {
     private Airspace airspace;
     private List<Aircraft> allAircrafts = new ArrayList<>();
     private List<ImageView> allViews = new ArrayList<>();
+    private List<Text> allLabels = new ArrayList<>(); // [추가] 고도 표시용 텍스트
     private List<Agent> allAgents = new ArrayList<>();
 
     private Pane simulationPane;
@@ -116,6 +120,7 @@ public class SimulationGUI extends Application {
         allAircrafts.clear();
         allAgents.clear();
         allViews.clear();
+        allLabels.clear(); // [추가] 라벨 초기화
         simulationPane.getChildren().clear();
 
         airspace = new Airspace();
@@ -128,8 +133,8 @@ public class SimulationGUI extends Application {
         double obstacleLat = 37.4510;     // 숫자를 올리면 북쪽으로 이동함
         Point2D.Double obsPos = projector.project(obstacleLat, 126.6620); // 숫자를 올리면 동쪽으로 이동함
 
-
-        Obstacle centerBuilding = new Obstacle(obsPos.x - 100.0, obsPos.y - 75.0, 200.0, 150.0);
+        // [변경] 생성자 파라미터가 바뀜 ( x, y, radius, height)
+        Obstacle centerBuilding = new Obstacle(obsPos.x - 100.0, obsPos.y - 75.0, 100.0, 150.0);
         airspace.addObstacle(centerBuilding);
         drawObstacle(centerBuilding);
 
@@ -138,8 +143,8 @@ public class SimulationGUI extends Application {
         Point2D.Double start1 = projector.project(fixedLat, 126.6480);
         Point2D.Double dest1  = projector.project(fixedLat, 126.6800);
 
-        // 속도 40m/s, 각도 0도(동쪽)
-        Aircraft a1 = new Aircraft(start1.x, start1.y, 80.0, 0.0);
+        // 속도 40m/s, 각도 0도(동쪽)  고도(z) 150 추가
+        Aircraft a1 = new Aircraft(start1.x, start1.y, 150.0, 40.0, 0.0);
         a1.setDestination(dest1.x, dest1.y); // Agent 참고용 최종 목적지
         a1.setCommandTarget(dest1.x, dest1.y); // 초기 명령
         a1.setTeam("blue");
@@ -150,8 +155,8 @@ public class SimulationGUI extends Application {
         Point2D.Double start2 = projector.project(fixedLat, 126.6740);
         Point2D.Double dest2  = projector.project(fixedLat, 126.6400);
 
-        // 속도 40m/s, 각도 180도(서쪽)
-        Aircraft a2 = new Aircraft(start2.x, start2.y, 80.0, 180.0);
+        // 속도 40m/s, 각도 180도(서쪽)  고도 (z) 150 추가
+        Aircraft a2 = new Aircraft(start2.x, start2.y, 150.0, 40.0, 180.0);
         a2.setDestination(dest2.x, dest2.y);
         a2.setCommandTarget(dest2.x, dest2.y);
         a2.setTeam("red");
@@ -176,11 +181,19 @@ public class SimulationGUI extends Application {
             Image redImg = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/red_jet.png")));
 
             for (int i = 0; i < allAircrafts.size(); i++) {
+                // 1. 이미지
                 ImageView view = new ImageView(i == 0 ? blueImg : redImg);
                 view.setFitWidth(40);
                 view.setFitHeight(40);
                 allViews.add(view);
                 simulationPane.getChildren().add(view);
+                // 2. 텍스트 라벨(고도 표시용) [ 추가]
+                Text label = new Text("Alt: 0m");
+                label.setFont(new Font(10));
+                label.setFill(Color.BLACK);
+                allLabels.add(label);
+                simulationPane.getChildren().add(label);
+
             }
         } catch (Exception e) { e.printStackTrace(); }
     }
@@ -192,24 +205,26 @@ public class SimulationGUI extends Application {
         double centerY = simulationPane.getPrefHeight() / 2.0;
 
         // 1. 크기 변환 (미터 -> 픽셀)
-        double w = CoordinateConverter.toPx(obs.getWidth());
-        double h = CoordinateConverter.toPx(obs.getHeight());
+        double radiusPx = CoordinateConverter.toPx(obs.getRadius());
 
         // 2. 위치 변환 (미터 -> 픽셀)
         double px = CoordinateConverter.toPx(obs.getX());
         double py = CoordinateConverter.toPx(obs.getY());
 
-        // 3. 좌표계 뒤집기 (Flip Y)
-        // 화면 Y = 중심 - 미터Y - (높이/2)  <-- 사각형은 좌상단 기준이라 높이 보정 필요
-        double screenX = centerX + px - (w / 2.0);
-        double screenY = centerY - py - (h / 2.0);
+        // 3. 화면 좌표계
+        double screenX = centerX + px;
+        double screenY = centerY - py;
 
-        Rectangle rect = new Rectangle(screenX, screenY, w, h);
-        rect.setFill(Color.GRAY);
-        rect.setStroke(Color.BLACK);
-        rect.setStrokeWidth(2);
+        // [변경] Rectangle -> Circle
+        Circle circle = new Circle(screenX, screenY, radiusPx);
+        circle.setFill(Color.color(0.5, 0.5, 0.5, 0.5)); // 반투명 회색
+        circle.setStroke(Color.BLACK);
+        circle.setStrokeWidth(2);
 
-        simulationPane.getChildren().add(rect);
+        // (선택) 빌딩 높이 텍스트 표시
+        Text heightText = new Text(screenX - 10, screenY, String.format("H: %.0fm", obs.getHeight()));
+
+        simulationPane.getChildren().addAll(circle, heightText);
     }
 
     // --- [View Logic] 비행기 갱신 (핵심 변환 로직) ---
@@ -220,31 +235,31 @@ public class SimulationGUI extends Application {
         for (int i = 0; i < allAircrafts.size(); i++) {
             Aircraft a = allAircrafts.get(i);
             ImageView v = allViews.get(i);
+            Text t = allLabels.get(i); // 라벨 가져오기
 
             // 1. 미터 -> 픽셀 스케일링
             double px = CoordinateConverter.toPx(a.getX());
             double py = CoordinateConverter.toPx(a.getY());
 
-            // 2. 좌표계 변환 (북쪽 +Y -> 화면 위쪽 -Y)
-            // 화면 중심(centerX, centerY)을 기준으로 이동
-            v.setX(centerX + px - (v.getFitWidth() / 2));
-            v.setY(centerY - py - (v.getFitHeight() / 2));
+            double screenX = centerX + px;
+            double screenY = centerY - py;
 
-            // 3. 각도 변환
-            // 수학: 반시계(CCW)가 +
-            // 화면: 시계(CW)가 +
-            // 따라서 기본적으로 -angle을 해줌.
-            // 단, 이미지가 '위(North, 90도)'를 보고 있다면 보정 필요:
-            // Math 90(North) -> Screen 0(Up)  => 90 - 90 = 0
-            // Math 0(East)   -> Screen 90(Right) => 90 - 0 = 90
+            // 2. 이미지 이동 및 회전
+            v.setX(screenX - (v.getFitWidth() / 2));
+            v.setY(screenY - (v.getFitHeight() / 2));
             v.setRotate(90 - a.getAngle());
 
-            // 효과 (선택사항)
-            if (i == 0) {
-                v.setEffect(new javafx.scene.effect.DropShadow(20, Color.CYAN));
-            }
+            // 3. 라벨 이동 및 텍스트 갱신 [추가]
+            t.setX(screenX + 20); // 비행기 약간 오른쪽에 표시
+            t.setY(screenY - 20); // 비행기 약간 위쪽에 표시
+            // 고도를 텍스트로 보여줌 (3D 확인용)
+            t.setText(String.format("Alt: %.0fm", a.getZ()));
+
+            // 효과 (상태에 따라 테두리 색상 변경)
             if ("Evade".equals(a.getTacticalState())) {
                 v.setEffect(new javafx.scene.effect.DropShadow(30, Color.RED));
+            } else {
+                v.setEffect(null);
             }
         }
     }

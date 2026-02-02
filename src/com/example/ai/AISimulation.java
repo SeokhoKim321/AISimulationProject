@@ -83,7 +83,7 @@ public class AISimulation {
             Point2D.Double start1 = projector.project(fixedLat, 126.6660);
             Point2D.Double dest1  = projector.project(fixedLat, 126.6800);
 
-            Aircraft a1 = new Aircraft(start1.x, start1.y, 40.0, 0.0);
+            Aircraft a1 = new Aircraft(start1.x, start1.y, 150, 40.0, 0.0);
             a1.setDestination(dest1.x, dest1.y);
             a1.setCommandTarget(dest1.x, dest1.y);
             a1.setTeam("blue");
@@ -93,7 +93,7 @@ public class AISimulation {
             Point2D.Double start2 = projector.project(fixedLat, 126.6740);
             Point2D.Double dest2  = projector.project(fixedLat, 126.6600);
 
-            Aircraft a2 = new Aircraft(start2.x, start2.y, 40.0, 180.0);
+            Aircraft a2 = new Aircraft(start2.x, start2.y, 150, 40.0, 180.0);
             a2.setDestination(dest2.x, dest2.y);
             a2.setCommandTarget(dest2.x, dest2.y);
             a2.setTeam("red");

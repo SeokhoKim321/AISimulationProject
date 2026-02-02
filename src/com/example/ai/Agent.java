@@ -30,6 +30,11 @@ public class Agent {
         // 1. 인식 (Perception)
         Aircraft threat = perceiveThreat(airspace);
 
+        // [변경 이유 1] 적기 객체 자체를 저장
+        // 기존: 거리(double)만 저장함 -> 고도 비교 불가능
+        // 변경: 적기 객체(threat)를 통째로 저장 -> 나중에 고도(z)를 꺼내서 비교하려고
+        this.blackboard.set("threatObject", threat);
+
         // 장애물 거리 측정
         double minObstacleDist = Double.MAX_VALUE;
         if (airspace.getObstacles() != null) {
@@ -51,6 +56,7 @@ public class Agent {
         // [중요] 활성도가 낮으면 물리적으로 보여도(threat != null) 못 본 척함
         if (threatActivation < 0.2) {
             this.blackboard.set("closestAircraftDistance", Double.MAX_VALUE);
+            this.blackboard.set("threatObject", null); // 못 봤으니 적기 정보도 지움
             threat = null;
         }
 
@@ -192,20 +198,24 @@ public class Agent {
         Selector root = new Selector("Root");
         Selector evasionLogic = new Selector("Evasion Logic");
 
+        // 1. 복귀
         Sequence stopEvasion = new Sequence("Stop");
         stopEvasion.addChildren(
                 new IsInState("Evading?", "Evade"),
                 // 안전 거리 600m 확보 시 복귀
-                new IsNot(new IsConflictDetected("Safe?", 600.0)),
+                new IsNot(new IsConflictDetected("Safe?", 800.0)),
                 new SetTacticalState("Cruise", "Cruising")
         );
 
+        // 2. 회피 시작(수형 회피만)
         Sequence startEvasion = new Sequence("Start");
         startEvasion.addChildren(
                 // 감지 거리 400m (UAM 속도 고려 시 적절)
-                new IsConflictDetected("Danger?", 400.0),
+                new IsConflictDetected("Danger?", 500.0),
                 new SetTacticalState("Evade", "Evade")
         );
+
+        // 3. 회피 유지
 
         Sequence stayEvasion = new Sequence("Stay");
         stayEvasion.addChildren(new IsInState("Still Evading?", "Evade"));
