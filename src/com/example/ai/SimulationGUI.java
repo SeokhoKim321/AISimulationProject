@@ -133,7 +133,7 @@ public class SimulationGUI extends Application {
         double obstacleLat = 37.4510;     // 숫자를 올리면 북쪽으로 이동함
         Point2D.Double obsPos = projector.project(obstacleLat, 126.6620); // 숫자를 올리면 동쪽으로 이동함
 
-        // [변경] 생성자 파라미터가 바뀜 ( x, y, radius, height)
+        // 장애물 생성(여기 부분을 블러처리하면 장애물 없을 때 비교 가능)
         Obstacle centerBuilding = new Obstacle(obsPos.x - 100.0, obsPos.y - 75.0, 100.0, 150.0);
         airspace.addObstacle(centerBuilding);
         drawObstacle(centerBuilding);

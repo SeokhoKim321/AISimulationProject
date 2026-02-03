@@ -21,11 +21,10 @@ public class Obstacle {
         this.height = height; // 건물 높이 설정
     }
 
-    // [핵심] 충돌 감지 함수 (비행기가 이 건물에 부딪혔나요?)
-    // Aircraft(비행기) 정보를 받아와서 검사합니다.
+    // [핵심] 충돌 감지 함수
     public boolean isColliding(Aircraft ac) {
 
-        // 1단계: 고도(Z축) 확인 (제일 중요!)
+        // 1단계: 고도(Z축) 확인
         // 비행기(ac)의 고도가 내 키(height)보다 높으면 부딪힐 일이 없습니다.
         // (안전 마진 10m를 더해서, 건물 옥상보다 10m 더 높게 날아야 안전하다고 판단)
         if (ac.getZ() > (this.height + 10)) {
@@ -42,7 +41,7 @@ public class Obstacle {
         double dist = Math.hypot(dx, dy);
 
         // 3단계: 최종 판단
-        // 거리가 (내 반지름 + 비행기 안전거리 30m)보다 가까우면 '쾅!'
+        // 거리가 (내 반지름 + 비행기 안전거리 30m)보다 가까우면 충돌
         if (dist < (this.radius + 30)) {
             return true; // 충돌!
         }
