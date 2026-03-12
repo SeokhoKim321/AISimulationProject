@@ -22,7 +22,7 @@ public class Aircraft {
 
 
     // 선회 능력 (초당 30도 회전)
-    private static final double MAX_TURN_RATE = 30.0;
+    private static final double MAX_TURN_RATE = 8.1;
     // [추가] 성능 제한 상수 (UAM 특성 반영)
     private static final double MAX_CLIMB_RATE = 10.0;    // 최대 상승률 (10m/s)
     private static final double MAX_DESCENT_RATE = 5.0;   // 최대 하강률 (5m/s)

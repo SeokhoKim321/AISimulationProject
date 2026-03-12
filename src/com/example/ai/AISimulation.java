@@ -1,3 +1,7 @@
+// ==========================
+// AiSimulation.java
+// ==========================
+
 package com.example.ai;
 
 import com.example.utils.LambertProjection;
@@ -8,7 +12,7 @@ import java.util.List;
 public class AISimulation {
 
     // 실험 설정 상수
-    private static final int TOTAL_RUNS = 100;
+    private static final int TOTAL_RUNS = 300;
     private static final int MAX_FRAMES = 3000;
     private static final double CRASH_THRESHOLD = 30.0;     // 충돌 판정 거리 (30m)
     private static final double NMAC_THRESHOLD = 100.0;     // 준사고 판정 거리 (100m)

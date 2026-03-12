@@ -20,6 +20,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle; // [변경] 사각형 -> 원
+import javafx.scene.shape.Line;   // [추가] 선 그리는 거
 import javafx.scene.text.Font;    // [추가] 폰트
 import javafx.scene.text.Text;    // [추가] 텍스트
 import javafx.stage.Stage;
@@ -144,7 +145,7 @@ public class SimulationGUI extends Application {
         Point2D.Double dest1  = projector.project(fixedLat, 126.6800);
 
         // 속도 40m/s, 각도 0도(동쪽)  고도(z) 150 추가
-        Aircraft a1 = new Aircraft(start1.x, start1.y, 150.0, 80.0, 0.0);
+        Aircraft a1 = new Aircraft(start1.x, start1.y, 150.0, 40.0, 0.0);
         a1.setDestination(dest1.x, dest1.y); // Agent 참고용 최종 목적지
         a1.setCommandTarget(dest1.x, dest1.y); // 초기 명령
         a1.setTeam("blue");
@@ -156,7 +157,7 @@ public class SimulationGUI extends Application {
         Point2D.Double dest2  = projector.project(fixedLat, 126.6400);
 
         // 속도 40m/s, 각도 180도(서쪽)  고도 (z) 150 추가
-        Aircraft a2 = new Aircraft(start2.x, start2.y, 150.0, 80.0, 180.0);
+        Aircraft a2 = new Aircraft(start2.x, start2.y, 150.0, 40.0, 180.0);
         a2.setDestination(dest2.x, dest2.y);
         a2.setCommandTarget(dest2.x, dest2.y);
         a2.setTeam("red");
@@ -170,6 +171,9 @@ public class SimulationGUI extends Application {
         // 이미지 생성
         createAircraftViews();
 
+        // [이곳에 코드 추가] 비행기들이 이동하기 전, 초기 위치를 화면 바닥에 고정으로 그립니다.
+        drawInitialPositions(a1, a2, centerBuilding);
+
         // 시작 전 위치 정렬 (한 번 갱신)
         updateUI();
     }
@@ -177,20 +181,23 @@ public class SimulationGUI extends Application {
     // --- [View] 비행기 이미지 생성 ---
     private void createAircraftViews() {
         try {
-            Image blueImg = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/blue_jet.png")));
-            Image redImg = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/red_jet.png")));
+            Image blueImg = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/blue_jet_2.png")));
+            Image redImg = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/red_jet_2.png")));
 
             for (int i = 0; i < allAircrafts.size(); i++) {
                 // 1. 이미지
                 ImageView view = new ImageView(i == 0 ? blueImg : redImg);
-                view.setFitWidth(40);
-                view.setFitHeight(40);
+                view.setFitWidth(80);  // 삼각형크기
+                view.setFitHeight(80); // 삼각형크기
                 allViews.add(view);
                 simulationPane.getChildren().add(view);
                 // 2. 텍스트 라벨(고도 표시용) [ 추가]
                 Text label = new Text("Alt: 0m");
-                label.setFont(new Font(10));
+                label.setFont(new Font(20));
                 label.setFill(Color.BLACK);
+                // [추가] 가로축(X)으로 1.2배 늘리기
+                label.setScaleX(1.2);
+
                 allLabels.add(label);
                 simulationPane.getChildren().add(label);
 
@@ -198,7 +205,7 @@ public class SimulationGUI extends Application {
         } catch (Exception e) { e.printStackTrace(); }
     }
 
-    // --- [View Logic] 장애물 그리기 (좌표 변환 적용) ---
+// --- [View Logic] 장애물 그리기 (좌표 변환 및 치수선 적용) ---
     private void drawObstacle(Obstacle obs) {
         // 화면 중심점
         double centerX = simulationPane.getPrefWidth() / 2.0;
@@ -215,16 +222,97 @@ public class SimulationGUI extends Application {
         double screenX = centerX + px;
         double screenY = centerY - py;
 
-        // [변경] Rectangle -> Circle
+        // 장애물 원형 (반투명)
         Circle circle = new Circle(screenX, screenY, radiusPx);
         circle.setFill(Color.color(0.5, 0.5, 0.5, 0.5)); // 반투명 회색
         circle.setStroke(Color.BLACK);
         circle.setStrokeWidth(2);
 
-        // (선택) 빌딩 높이 텍스트 표시
-        Text heightText = new Text(screenX - 10, screenY, String.format("H: %.0fm", obs.getHeight()));
+        // [추가 1] 원의 정중앙을 표시하는 작은 점
+        Circle centerDot = new Circle(screenX, screenY, 3, Color.BLACK);
 
-        simulationPane.getChildren().addAll(circle, heightText);
+        // [추가 2] 반경(R)을 나타내는 치수선 (중심에서 오른쪽 테두리까지)
+        Line radiusLine = new Line(screenX, screenY, screenX + radiusPx, screenY);
+        radiusLine.setStroke(Color.BLACK);
+        radiusLine.getStrokeDashArray().addAll(5d, 5d); // 선을 점선(Dash)으로 만듦
+
+        // [추가 3] 반경 텍스트 (R: 100m) - 선의 중간 살짝 위에 배치
+        Text radiusText = new Text(screenX + (radiusPx / 2.0) - 30, screenY - 10, String.format("R: %.0fm", obs.getRadius()));
+        radiusText.setFont(new Font(20));
+        radiusText.setFill(Color.BLUE);
+        radiusText.setScaleX(1.2); // [추가] 가로로 1.2배 늘림
+
+        // [수정] 높이 텍스트 (H: 150m) - 중앙점 아래에 배치
+        Text heightText = new Text(screenX - 35, screenY + 25, String.format("H: %.0fm", obs.getHeight()));
+        heightText.setFont(new Font(20));
+        heightText.setFill(Color.RED);
+        heightText.setScaleX(1.2); // [추가] 가로로 1.2배 늘림
+
+        // 화면에 모든 요소를 한 번에 추가
+        simulationPane.getChildren().addAll(circle, centerDot, radiusLine, radiusText, heightText);
+    }
+
+    // --- [View Logic] 초기 위치 및 거리선 고정 그리기 ---
+    private void drawInitialPositions(Aircraft a1, Aircraft a2, Obstacle obs) {
+        double centerX = simulationPane.getPrefWidth() / 2.0;
+        double centerY = simulationPane.getPrefHeight() / 2.0;
+
+        // 1. 장애물 화면 좌표 변환
+        double obsPx = CoordinateConverter.toPx(obs.getX());
+        double obsPy = CoordinateConverter.toPx(obs.getY());
+        double screenObsX = centerX + obsPx;
+        double screenObsY = centerY - obsPy;
+
+        // 2. 파란 비행기(A1) 초기 화면 좌표 변환
+        double a1Px = CoordinateConverter.toPx(a1.getX());
+        double a1Py = CoordinateConverter.toPx(a1.getY());
+        double screenA1X = centerX + a1Px;
+        double screenA1Y = centerY - a1Py;
+
+        // 3. 빨간 비행기(A2) 초기 화면 좌표 변환
+        double a2Px = CoordinateConverter.toPx(a2.getX());
+        double a2Py = CoordinateConverter.toPx(a2.getY());
+        double screenA2X = centerX + a2Px;
+        double screenA2Y = centerY - a2Py;
+
+        // 4. 장애물과 각 비행기 사이의 실제 물리적 거리(미터) 계산
+        double rawDist1 = Math.sqrt(Math.pow(a1.getX() - obs.getX(), 2) + Math.pow(a1.getY() - obs.getY(), 2));
+        double rawDist2 = Math.sqrt(Math.pow(a2.getX() - obs.getX(), 2) + Math.pow(a2.getY() - obs.getY(), 2));
+
+        // [수정] 거리를 100m 단위로 반올림하여 대칭적이고 깔끔한 숫자로 만듭니다.
+        double cleanDist1 = Math.round(rawDist1 / 100.0) * 100.0;
+        double cleanDist2 = Math.round(rawDist2 / 100.0) * 100.0;
+
+        // 5. 파란 비행기(A1) 시각물 생성
+        Line line1 = new Line(screenA1X, screenA1Y, screenObsX, screenObsY);
+        line1.setStroke(Color.GRAY);
+        line1.getStrokeDashArray().addAll(5d, 5d);
+
+        Circle marker1 = new Circle(screenA1X, screenA1Y, 10, Color.TRANSPARENT);
+        marker1.setStroke(Color.BLUE);
+
+        // [수정] 텍스트를 "Start"로 변경하고, 마커의 왼쪽(-60) 아래(+45)로 넉넉히 이동시킵니다.
+        Text text1 = new Text(screenA1X - 10, screenA1Y + 65, String.format("Start: %.0fm", cleanDist1));
+        text1.setFont(new Font(20));
+        text1.setFill(Color.BLUE);
+        text1.setScaleX(1.2); // [추가] 가로로 1.2배 늘림
+
+        // 6. 빨간 비행기(A2) 시각물 생성
+        Line line2 = new Line(screenA2X, screenA2Y, screenObsX, screenObsY);
+        line2.setStroke(Color.GRAY);
+        line2.getStrokeDashArray().addAll(5d, 5d);
+
+        Circle marker2 = new Circle(screenA2X, screenA2Y, 10, Color.TRANSPARENT);
+        marker2.setStroke(Color.RED);
+
+        // [수정] 텍스트를 "Start"로 변경하고, 마커의 오른쪽(+10) 아래(+45)로 이동시킵니다.
+        Text text2 = new Text(screenA2X - 20, screenA2Y + 65, String.format("Start: %.0fm", cleanDist2));
+        text2.setFont(new Font(20));
+        text2.setFill(Color.RED);
+        text2.setScaleX(1.2); // [추가] 가로로 1.2배 늘림
+
+        // 7. 위에서 만든 모든 선, 점, 글자를 화면 도화지(simulationPane)에 붙임
+        simulationPane.getChildren().addAll(line1, line2, marker1, marker2, text1, text2);
     }
 
     // --- [View Logic] 비행기 갱신 (핵심 변환 로직) ---
@@ -250,8 +338,8 @@ public class SimulationGUI extends Application {
             v.setRotate(90 - a.getAngle());
 
             // 3. 라벨 이동 및 텍스트 갱신 [추가]
-            t.setX(screenX + 20); // 비행기 약간 오른쪽에 표시
-            t.setY(screenY - 20); // 비행기 약간 위쪽에 표시
+            t.setX(screenX + 40); // 비행기 약간 오른쪽에 표시
+            t.setY(screenY - 60); // 비행기 약간 위쪽에 표시
             // 고도를 텍스트로 보여줌 (3D 확인용)
             t.setText(String.format("Alt: %.0fm", a.getZ()));
 

@@ -32,7 +32,7 @@ public class Agent {
 
         // [변경 이유 1] 적기 객체 자체를 저장
         // 기존: 거리(double)만 저장함 -> 고도 비교 불가능
-        // 변경: 적기 객체(threat)를 통째로 저장 -> 나중에 고도(z)를 꺼내서 비교하려고
+        // 변경: 적기 객체(threat)를 통째로 저장 -> 나중에 고도(z)를 꺼내서 비교를 위함
         this.blackboard.set("threatObject", threat);
 
         // 장애물 거리 측정
