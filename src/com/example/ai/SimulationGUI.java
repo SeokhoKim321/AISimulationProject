@@ -151,6 +151,12 @@ public class SimulationGUI extends Application {
         a1.setTeam("blue");
         Agent ag1 = new Agent(a1);
 
+        // --- [여기서부터 아래 2줄을 추가하십시오] ---
+        // a1 비행기에게 9090번 주파수를 쓰는 통신병을 배속시키고 근무(start)를 명합니다.
+        UdpConnector connector = new UdpConnector(a1, 9090);
+        connector.start();
+        // ------------------------------------------
+
         // 3. 빨간 비행기 (동 -> 서)
         // 장애물보다 동쪽 600m 지점
         Point2D.Double start2 = projector.project(fixedLat, 126.6740);

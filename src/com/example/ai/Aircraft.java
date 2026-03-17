@@ -14,6 +14,30 @@ public class Aircraft {
     private double z;  // 고도(Altitude, m)
     private double verticalSpeed; // 수직속도 (m/s)
 
+    // --- [MATLAB 6자유도 연동용 수신 변수 신설] ---
+    private double pitch;             // 기수 상하 자세각 (도)
+    private double roll;              // 기체 좌우 기울어짐 (도)
+    private double yaw;               // 기수 진방향 (도)
+    private double indicatedAirspeed; // 계기 대기속도 (m/s 또는 kts)
+    private double engineRPM;         // 주 로터 동력 / UAM 모터 출력 단위
+    // ----------------------------------------------
+
+    // --- [MATLAB 데이터용 Getters & Setters] ---
+    public double getPitch() { return pitch; }
+    public void setPitch(double pitch) { this.pitch = pitch; }
+
+    public double getRoll() { return roll; }
+    public void setRoll(double roll) { this.roll = roll; }
+
+    public double getYaw() { return yaw; }
+    public void setYaw(double yaw) { this.yaw = yaw; }
+
+    public double getIndicatedAirspeed() { return indicatedAirspeed; }
+    public void setIndicatedAirspeed(double indicatedAirspeed) { this.indicatedAirspeed = indicatedAirspeed; }
+
+    public double getEngineRPM() { return engineRPM; }
+    public void setEngineRPM(double engineRPM) { this.engineRPM = engineRPM; }
+
     // 2. 항법 속성
     private double destX, destY;       // 최종 목적지
     private double destZ ;   // 최종 목적지 고도

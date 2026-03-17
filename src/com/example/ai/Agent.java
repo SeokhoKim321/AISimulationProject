@@ -1,3 +1,7 @@
+// ==========================
+// Agent.java
+// ==========================
+
 package com.example.ai;
 
 import com.example.ai.memory.*;
@@ -11,7 +15,16 @@ public class Agent {
     private final Blackboard blackboard;
     private final Random random;
 
-    private final String[] cellNames = {"ClosestAircraft", "Fuel Level", "Altitude", "Obstacle"};
+    // [정정된 코드]
+    private final String[] cellNames = {
+            "ClosestAircraft", // 기존: 주변 타 항공기 (향후 DAA 화면 인지로 연동)
+            "Fuel Level",      // 기존: 연료량
+            "Altitude",        // 기존: 고도계
+            "Obstacle",        // 기존: 주변 장애물 (향후 DAA 화면 인지로 연동)
+            "PFD_Attitude",    // 신규: 주 비행 디스플레이(PFD)의 자세(Pitch, Roll) 정보
+            "PFD_Airspeed",    // 신규: 주 비행 디스플레이(PFD)의 대기속도 정보
+            "Engine_RPM"       // 신규: 엔진/로터 동력 출력 계기 정보
+    };
     private Aircraft aircraft;
 
     public Agent(Aircraft aircraft) {
