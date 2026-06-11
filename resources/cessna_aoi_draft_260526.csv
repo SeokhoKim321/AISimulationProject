@@ -1,0 +1,11 @@
+aoi,x1,y1,x2,y2,priority,status,note
+OUTSIDE_CENTER,380,120,1460,560,required,draft,central outside forward view
+AIRSPEED,650,650,825,855,required,draft,airspeed indicator
+ATTITUDE,840,650,1025,855,required,draft,attitude indicator
+ALTITUDE,1030,650,1230,855,required,draft,altimeter
+VERTICAL_SPEED,1085,875,1245,1070,required,conditional,vertical speed indicator may be narrow
+HEADING,835,875,1035,1070,optional,draft,heading indicator
+NAV_GPS,1535,680,1875,930,optional,draft,GPS or navigation display
+RUNWAY_ZONE,760,250,1160,520,optional,needs_review,adjust using late approach screenshot
+ADVISORY,730,120,1010,200,required,provisional,visual advisory position from v18 draw location; refine with screenshot
+DEBUG_TEXT,0,30,390,520,exclude,draft,exclude Lua debug overlay from gaze AOI analysis

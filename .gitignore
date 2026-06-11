@@ -27,3 +27,17 @@ bin/
 
 ### Mac OS ###
 .DS_Store
+
+### Java build outputs ###
+*.class
+out/
+build_tmp/
+build_atc_tmp/
+
+### Runtime logs / generated data ###
+logs/
+
+### Local generated folders ###
+slprj/
+j6dof-temp/
+desktop.ini
