@@ -71,7 +71,7 @@ public class AISimulation {
                 // 장애물 위도/경도 설정
                 double obstacleLat = 37.4510;
                 // GUI와 똑같이 중앙에 장애물 배치
-                Point2D.Double obsPos = projector.project(obstacleLat, 126.6700);
+                Point2D.Double obsPos = projector.project(obstacleLat, 126.6620);
 
                 // SimulationGUI와 똑같이 중심 보정 (-100, -75) 적용
                 Obstacle centerBuilding = new Obstacle(
@@ -84,10 +84,10 @@ public class AISimulation {
 
             // 2. 항공기 생성 (GUI와 동일한 좌표 계산)
             // 파란 비행기 (서 -> 동)
-            Point2D.Double start1 = projector.project(fixedLat, 126.6660);
+            Point2D.Double start1 = projector.project(fixedLat, 126.6480);
             Point2D.Double dest1  = projector.project(fixedLat, 126.6800);
 
-            Aircraft a1 = new Aircraft(start1.x, start1.y, 150, 40.0, 0.0);
+            Aircraft a1 = new Aircraft(start1.x, start1.y, 150, 80.0, 0.0);
             a1.setDestination(dest1.x, dest1.y);
             a1.setCommandTarget(dest1.x, dest1.y);
             a1.setTeam("blue");
@@ -97,7 +97,7 @@ public class AISimulation {
             Point2D.Double start2 = projector.project(fixedLat, 126.6740);
             Point2D.Double dest2  = projector.project(fixedLat, 126.6600);
 
-            Aircraft a2 = new Aircraft(start2.x, start2.y, 150, 40.0, 180.0);
+            Aircraft a2 = new Aircraft(start2.x, start2.y, 150, 80.0, 180.0);
             a2.setDestination(dest2.x, dest2.y);
             a2.setCommandTarget(dest2.x, dest2.y);
             a2.setTeam("red");

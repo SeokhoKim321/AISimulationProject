@@ -48,12 +48,15 @@ public class Agent {
         // 변경: 적기 객체(threat)를 통째로 저장 -> 나중에 고도(z)를 꺼내서 비교를 위함
         this.blackboard.set("threatObject", threat);
 
-        // 장애물 거리 측정
+// 장애물 거리 측정
         double minObstacleDist = Double.MAX_VALUE;
         if (airspace.getObstacles() != null) {
             for (Obstacle obs : airspace.getObstacles()) {
-                double dist = obs.getDistance(aircraft.getX(), aircraft.getY());
-                if (dist < minObstacleDist) minObstacleDist = dist;
+                // [수정된 부분] 장애물이 내 앞(시야)에 있을 때만 거리를 인식함
+                if (isObstacleInFront(obs)) {
+                    double dist = obs.getDistance(aircraft.getX(), aircraft.getY());
+                    if (dist < minObstacleDist) minObstacleDist = dist;
+                }
             }
         }
         this.blackboard.set("closestObstacleDistance", minObstacleDist);
@@ -108,6 +111,8 @@ public class Agent {
             targetY = aircraft.getDestY();
         }
         aircraft.setCommandTarget(targetX, targetY);
+        aircraft.setTargetAltitudeM(aircraft.getZ());
+        aircraft.setTargetSpeedMps(Math.max(aircraft.getIndicatedAirspeed(), 40.0));
     }
 
     // --- [핵심] 우측 회피 좌표 계산 (Standard Math) ---
@@ -180,20 +185,24 @@ public class Agent {
             else if (roll < 0.95) return "ClosestAircraft";
             else return "Altitude";
         }
-        // 3. [보통] 다른 항공기와 1000m 거리 이내 상황
+        // 3. [보통] 평시 상황 (4개 계기 정보 균등 확인)
         else {
-            if (distToThreat < 2000.0) {
-                if (roll < 0.40){
-                    return "ClosestAircraft";
-            } else if (roll < 0.60) {
+            // 0.00 ~ 0.25 (25% 확률)
+            if (roll < 0.25) {
+                return "ClosestAircraft";
+            }
+            // 0.25 ~ 0.50 (25% 확률)
+            else if (roll < 0.50) {
                 return "Obstacle";
-            } else if (roll < 0.80) {
+            }
+            // 0.50 ~ 0.75 (25% 확률)
+            else if (roll < 0.75) {
                 return "Altitude";
-            } else{
+            }
+            // 0.75 ~ 1.00 (나머지 25% 확률)
+            else {
                 return "Fuel Level";
             }
-        }
-            return "Altitude";
         }
     }
 
@@ -236,5 +245,23 @@ public class Agent {
         evasionLogic.addChildren(stopEvasion, startEvasion, stayEvasion);
         root.addChildren(evasionLogic, new SetTacticalState("Default", "Cruising"));
         return root;
+    }
+    // --- [핵심 추가] 장애물이 기체 전방(시야)에 있는지 판별 ---
+    private boolean isObstacleInFront(Obstacle obs) {
+        double dx = obs.getX() - aircraft.getX();
+        double dy = obs.getY() - aircraft.getY();
+
+        // 장애물까지의 절대 각도 계산
+        double angleToObs = Math.toDegrees(Math.atan2(dy, dx));
+
+        // 기체 기수(Heading)와의 차이
+        double diff = angleToObs - aircraft.getAngle();
+
+        // -180 ~ 180 정규화
+        while (diff <= -180) diff += 360;
+        while (diff > 180) diff -= 360;
+
+        // 전방 90도 (좌우 90도) 시야각 이내일 때만 true 반환
+        return Math.abs(diff) < 90.0;
     }
 }

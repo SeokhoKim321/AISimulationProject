@@ -1,3 +1,7 @@
+// ==========================
+// CalculateDWC.java
+// ==========================
+
 package flight.analysis;
 
 import geography.Position;
