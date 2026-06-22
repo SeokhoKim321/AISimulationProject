@@ -45,8 +45,10 @@ public class XPlaneSessionAnalysisMain {
 
     public static XPlaneSessionSummary analyze(Path stateCsv, Path intruderCsv, Path eventCsv) throws IOException {
         List<String[]> eventRows = readCsv(eventCsv);
-        List<String[]> intruderRows = readCsv(intruderCsv);
+        CsvTable intruderTable = readCsvTable(intruderCsv);
+        List<String[]> intruderRows = intruderTable.rows;
         List<String[]> stateRows = readCsv(stateCsv);
+        IntruderColumns intruderColumns = IntruderColumns.from(intruderTable);
 
         String sessionId = eventRows.isEmpty() ? "unknown_session" : valueAt(eventRows.get(0), 1);
 
@@ -115,9 +117,12 @@ public class XPlaneSessionAnalysisMain {
         Double minDistanceSimTime = null;
 
         for (String[] row : intruderRows) {
-            double horizontalDistance = parseDouble(valueAt(row, 10));
-            double verticalSeparation = parseDouble(valueAt(row, 11));
-            double simTime = parseDouble(valueAt(row, 3));
+            Double horizontalDistance = parseNullableDouble(valueAt(row, intruderColumns.horizontalDistanceIndex));
+            Double verticalSeparation = parseNullableDouble(valueAt(row, intruderColumns.verticalSeparationIndex));
+            Double simTime = parseNullableDouble(valueAt(row, intruderColumns.simTimeIndex));
+            if (horizontalDistance == null || verticalSeparation == null) {
+                continue;
+            }
 
             if (Double.isNaN(minHorizontalDistance) || horizontalDistance < minHorizontalDistance) {
                 minHorizontalDistance = horizontalDistance;
@@ -150,14 +155,15 @@ public class XPlaneSessionAnalysisMain {
                 minHorizontalDistance,
                 minVerticalSeparation,
                 minDistanceSimTime,
-                analyzeTrials(stateRows, intruderRows, eventRows)
+                analyzeTrials(stateRows, intruderRows, eventRows, intruderColumns)
         );
     }
 
     private static List<XPlaneTrialSummary> analyzeTrials(
             List<String[]> stateRows,
             List<String[]> intruderRows,
-            List<String[]> eventRows
+            List<String[]> eventRows,
+            IntruderColumns intruderColumns
     ) {
         Map<Integer, List<String[]>> statesByTrial = groupByTrialId(stateRows, 1);
         Map<Integer, List<String[]>> intrudersByTrial = groupByTrialId(intruderRows, 1);
@@ -189,9 +195,12 @@ public class XPlaneSessionAnalysisMain {
             double minVerticalSeparation = Double.NaN;
             Double minDistanceSimTime = null;
             for (String[] row : trialIntruders) {
-                double horizontalDistance = parseDouble(valueAt(row, 10));
-                double verticalSeparation = parseDouble(valueAt(row, 11));
-                double simTime = parseDouble(valueAt(row, 3));
+                Double horizontalDistance = parseNullableDouble(valueAt(row, intruderColumns.horizontalDistanceIndex));
+                Double verticalSeparation = parseNullableDouble(valueAt(row, intruderColumns.verticalSeparationIndex));
+                Double simTime = parseNullableDouble(valueAt(row, intruderColumns.simTimeIndex));
+                if (horizontalDistance == null || verticalSeparation == null) {
+                    continue;
+                }
 
                 if (Double.isNaN(minHorizontalDistance) || horizontalDistance < minHorizontalDistance) {
                     minHorizontalDistance = horizontalDistance;
@@ -239,19 +248,27 @@ public class XPlaneSessionAnalysisMain {
     }
 
     private static List<String[]> readCsv(Path path) throws IOException {
+        return readCsvTable(path).rows;
+    }
+
+    private static CsvTable readCsvTable(Path path) throws IOException {
         List<String[]> rows = new ArrayList<>();
         if (!Files.exists(path)) {
-            return rows;
+            return new CsvTable(new String[0], rows);
         }
 
         List<String> lines = Files.readAllLines(path, StandardCharsets.UTF_8);
+        String[] header = new String[0];
+        if (!lines.isEmpty()) {
+            header = parseCsvLine(lines.get(0).trim());
+        }
         for (int i = 1; i < lines.size(); i++) {
             String line = lines.get(i).trim();
             if (!line.isEmpty()) {
                 rows.add(parseCsvLine(line));
             }
         }
-        return rows;
+        return new CsvTable(header, rows);
     }
 
     private static String[] parseCsvLine(String line) {
@@ -305,13 +322,13 @@ public class XPlaneSessionAnalysisMain {
                     + " (" + formatNullable(summary.firstHazardClearTimeS - summary.firstHazardTimeS) + " s)");
         }
         if (summary.firstAdvisoryTimeS != null && summary.firstResponseStartTimeS != null) {
-            System.out.println("Advisory->Response Start : " + formatNullable(summary.firstResponseStartTimeS - summary.firstAdvisoryTimeS) + " s");
+            System.out.println("Advisory->Response Start : " + formatOrderedDelta(summary.firstAdvisoryTimeS, summary.firstResponseStartTimeS));
         }
         if (summary.firstHazardTimeS != null && summary.firstResponseStartTimeS != null) {
-            System.out.println("Hazard->Response Start   : " + formatNullable(summary.firstResponseStartTimeS - summary.firstHazardTimeS) + " s");
+            System.out.println("Hazard->Response Start   : " + formatOrderedDelta(summary.firstHazardTimeS, summary.firstResponseStartTimeS));
         }
         if (summary.firstHazardTimeS != null && summary.firstAdvisoryTimeS != null) {
-            System.out.println("Hazard->Advisory         : " + formatNullable(summary.firstAdvisoryTimeS - summary.firstHazardTimeS) + " s");
+            System.out.println("Hazard->Advisory         : " + formatOrderedDelta(summary.firstHazardTimeS, summary.firstAdvisoryTimeS));
         }
 
         printTrialSummary(summary.trials);
@@ -582,8 +599,54 @@ public class XPlaneSessionAnalysisMain {
         return formatNullable(end - start) + " s";
     }
 
+    private static String formatOrderedDelta(Double start, Double end) {
+        if (start == null || end == null || end < start) {
+            return "n/a";
+        }
+        return formatNullable(end - start) + " s";
+    }
+
     private static String blankToUnknown(String value) {
         return value == null || value.isBlank() ? "unknown" : value;
+    }
+
+    private static int columnIndex(String[] header, String columnName, int fallbackIndex) {
+        for (int i = 0; i < header.length; i++) {
+            if (columnName.equals(header[i])) {
+                return i;
+            }
+        }
+        return fallbackIndex;
+    }
+
+    private static class CsvTable {
+        final String[] header;
+        final List<String[]> rows;
+
+        private CsvTable(String[] header, List<String[]> rows) {
+            this.header = header;
+            this.rows = rows;
+        }
+    }
+
+    private static class IntruderColumns {
+        final int simTimeIndex;
+        final int horizontalDistanceIndex;
+        final int verticalSeparationIndex;
+
+        private IntruderColumns(int simTimeIndex, int horizontalDistanceIndex, int verticalSeparationIndex) {
+            this.simTimeIndex = simTimeIndex;
+            this.horizontalDistanceIndex = horizontalDistanceIndex;
+            this.verticalSeparationIndex = verticalSeparationIndex;
+        }
+
+        static IntruderColumns from(CsvTable table) {
+            return new IntruderColumns(
+                    columnIndex(table.header, "sim_time_s", 3),
+                    columnIndex(table.header, "horizontal_distance", 10),
+                    columnIndex(table.header, "vertical_separation", 11)
+            );
+        }
     }
 
     public static class XPlaneSessionSummary {

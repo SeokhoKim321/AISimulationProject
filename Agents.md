@@ -324,3 +324,11 @@ java -cp build_atc_tmp com.example.ai.XPlaneReceiverMain 9100 build_atc_tmp\xpla
 - clean 평균 `advisory->response`: `0.684 s`
 - clean 평균 `hazard_window`: `2.444 s`
 - 현재 `XPlaneSessionAnalysisMain`은 v21 intruder CSV의 추가 geo 컬럼을 반영하지 못해 거리 통계를 잘못 읽는다. event 기반 clean/incomplete 판정은 사용할 수 있지만, 거리 통계는 CSV 헤더 기준으로 수정해야 한다.
+
+## 2026-06-22 Analyzer update rule
+
+- `XPlaneSessionAnalysisMain`은 v21 intruder CSV의 `horizontal_distance`, `vertical_separation`, `sim_time_s`를 header name으로 찾아 읽도록 수정됐다.
+- v21 intruder CSV는 geo 컬럼이 중간에 추가되므로, 앞으로 분석 코드는 intruder CSV 컬럼을 고정 index로 읽지 않는다.
+- `XPlaneBatchAnalysisMain`은 `xplane_session_...csv`뿐 아니라 `xplane_atc_...csv` receiver output도 직접 분석할 수 있다.
+- session-level first event latency가 sim time reset 때문에 음수가 되면 `n/a`로 표시한다.
+- 2026-06-22 `test2` 재분석 기준 clean rate는 `7 / 17 = 41.2%`이고, clean 평균 최소 수평거리는 `10.406 m`이다.

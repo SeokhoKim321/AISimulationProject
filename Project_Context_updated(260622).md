@@ -493,6 +493,26 @@ Incomplete 주요 원인:
 
 분석 도구 주의:
 
-- 현재 `XPlaneSessionAnalysisMain`은 v21 intruder CSV에서 `intruder_latitude_deg`, `intruder_longitude_deg`, `intruder_elevation_m` 컬럼이 추가된 것을 반영하지 못한다.
-- 그 결과 analyzer 공식 출력의 `Min horiz dist`가 음수처럼 잘못 표시될 수 있다.
-- event 기반 clean/incomplete 판정은 유효하지만, 거리 통계는 CSV 헤더 기준으로 읽도록 analyzer를 수정해야 한다.
+- 2026-06-22에 `XPlaneSessionAnalysisMain`을 v21 intruder CSV 헤더 기반으로 수정했다.
+- 이제 `horizontal_distance`, `vertical_separation`, `sim_time_s` 컬럼을 header name으로 찾아 읽으므로 v21의 intruder geo 컬럼 추가 이후에도 거리 통계가 정상 출력된다.
+- `XPlaneBatchAnalysisMain`도 `xplane_session_...csv`뿐 아니라 `xplane_atc_...csv` 같은 receiver output 파일명을 직접 받을 수 있도록 완화했다.
+- receiver 재시작이나 sim time reset이 섞여 세션 전체의 첫 advisory/response 시간이 역전되는 경우, session-level response latency는 음수 대신 `n/a`로 표시한다.
+
+수정 후 검증:
+
+```powershell
+javac --release 21 -d build_atc_tmp src\com\example\ai\XPlane*.java src\com\example\ai\AtcServer*.java
+java -cp build_atc_tmp com.example.ai.XPlaneSessionAnalysisMain build_atc_tmp\xplane_atc_intruder_onlink_260622_test2.csv
+java -cp build_atc_tmp com.example.ai.XPlaneBatchAnalysisMain build_atc_tmp\xplane_atc_intruder_onlink_260622_test2.csv
+```
+
+수정 후 batch 결과:
+
+- total trials: `17`
+- clean trials: `7`
+- clean rate: `41.2%`
+- clean 평균 `spawn->hazard`: `6.730 s`
+- clean 평균 `advisory->response`: `0.684 s`
+- clean 평균 `hazard_window`: `2.444 s`
+- clean 평균 최소 수평거리: `10.406 m`
+- clean 평균 최소 수직분리: `11.275 m`

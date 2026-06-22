@@ -62,10 +62,10 @@ public class XPlaneBatchAnalysisMain {
 
     private static boolean isStateCsv(Path path) {
         String fileName = path.getFileName().toString();
-        return fileName.startsWith("xplane_session_")
-                && fileName.endsWith(".csv")
+        return fileName.endsWith(".csv")
                 && !fileName.endsWith("_intruder.csv")
-                && !fileName.endsWith("_events.csv");
+                && !fileName.endsWith("_events.csv")
+                && !fileName.contains("_batch_analysis_");
     }
 
     private static boolean isCompatibleStateCsv(Path path) {

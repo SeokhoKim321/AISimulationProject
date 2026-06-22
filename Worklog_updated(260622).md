@@ -662,3 +662,55 @@ Incomplete 원인 요약:
 2. `XPlaneBatchAnalysisMain` export 거리 통계도 v21 CSV 기준으로 검증한다.
 3. 같은 방식으로 5~10 trial을 추가 수집해 clean trial 비율을 다시 확인한다.
 4. Tobii Spark 도착 전까지 AOI 좌표와 visual advisory 위치를 실제 화면 캡처 기준으로 보정한다.
+
+## 2026-06-22 Analyzer v21 intruder CSV fix
+
+재검증 데이터 분석 중 `XPlaneSessionAnalysisMain`이 v21 intruder CSV를 잘못 읽는 문제를 수정했다.
+
+문제:
+
+- v21 intruder CSV는 `intruder_z` 뒤에 `intruder_latitude_deg`, `intruder_longitude_deg`, `intruder_elevation_m` 컬럼이 추가됐다.
+- 기존 analyzer는 `horizontal_distance`, `vertical_separation`을 고정 index로 읽고 있었다.
+- 그 결과 analyzer 공식 출력에서 `Min horiz dist`가 음수로 표시되는 등 거리 통계가 잘못 나왔다.
+
+수정 파일:
+
+- `src/com/example/ai/XPlaneSessionAnalysisMain.java`
+- `src/com/example/ai/XPlaneBatchAnalysisMain.java`
+- `Project_Context.md`
+- `Worklog.md`
+- `Agents.md`
+
+변경 내용:
+
+- `XPlaneSessionAnalysisMain`에 CSV header를 보존하는 `CsvTable` 구조를 추가했다.
+- intruder 분석은 `horizontal_distance`, `vertical_separation`, `sim_time_s` 컬럼을 header name으로 찾아 읽도록 변경했다.
+- header가 없는 구형 구조를 고려해 기존 index fallback도 유지했다.
+- session-level response latency가 sim time reset 때문에 음수가 되면 `n/a`로 표시하도록 했다.
+- `XPlaneBatchAnalysisMain`은 `xplane_session_...csv` prefix만 허용하던 제한을 완화해 `xplane_atc_...csv` 같은 receiver output도 직접 분석할 수 있게 했다.
+
+검증 명령:
+
+```powershell
+javac --release 21 -d build_atc_tmp src\com\example\ai\XPlane*.java src\com\example\ai\AtcServer*.java
+java -cp build_atc_tmp com.example.ai.XPlaneSessionAnalysisMain build_atc_tmp\xplane_atc_intruder_onlink_260622_test2.csv
+java -cp build_atc_tmp com.example.ai.XPlaneBatchAnalysisMain build_atc_tmp\xplane_atc_intruder_onlink_260622_test2.csv
+```
+
+검증 결과:
+
+- 컴파일 성공
+- session analyzer의 최소 수평거리 출력이 정상값으로 변경됨
+- batch analyzer가 `xplane_atc_intruder_onlink_260622_test2.csv` 단일 파일을 직접 분석함
+- batch 결과: total `17`, clean `7`, incomplete `10`, clean rate `41.2%`
+- clean 평균 `spawn->hazard`: `6.730 s`
+- clean 평균 `advisory->response`: `0.684 s`
+- clean 평균 `hazard_window`: `2.444 s`
+- clean 평균 최소 수평거리: `10.406 m`
+- clean 평균 최소 수직분리: `11.275 m`
+
+다음 작업:
+
+1. 수정된 analyzer를 Git `ver8`에 commit/push한다.
+2. 새 analyzer 기준으로 다음 X-Plane/ATC 반복 trial을 분석한다.
+3. pilot response 누락 trial을 줄이기 위해 response threshold와 운용 절차를 검토한다.
