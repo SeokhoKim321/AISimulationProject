@@ -1,0 +1,7 @@
+aoi,x1,y1,x2,y2,priority,status,note
+AIRSPEED,650,650,825,855,required,verified,airspeed indicator
+ATTITUDE,840,650,1025,855,required,verified,attitude indicator
+ALTITUDE,1030,650,1230,855,required,verified,altimeter
+VERTICAL_SPEED,1085,875,1245,1070,required,verified,vertical speed indicator
+HEADING,835,875,1035,1070,required,verified,heading indicator
+NAV_GPS,1535,680,1875,930,required,verified,GPS or navigation display
