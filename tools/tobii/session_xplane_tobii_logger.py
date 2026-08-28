@@ -1,6 +1,9 @@
+import argparse
 import csv
 import math
+import os
 import queue
+import re
 import sys
 import time
 from datetime import datetime
@@ -12,6 +15,7 @@ import tobii_research as tr
 SESSION_PREFIX = "session_xplane_tobii"
 RECORD_SECONDS = 600
 PRINT_FIRST_ROWS = 5
+DEFAULT_PROJECT_ROOT = Path(r"C:\Users\ACSL-SERVER\Desktop\AISimulationProject")
 
 
 FIELDNAMES = [
@@ -57,10 +61,35 @@ def average_valid_gaze(left_x, left_y, left_valid, right_x, right_y, right_valid
     )
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(description="Record a timestamped Tobii gaze session for X-Plane.")
+    parser.add_argument(
+        "--participant-code",
+        default="",
+        help="Optional non-identifying code such as P001; names must not be used.",
+    )
+    parser.add_argument("--duration-s", type=float, default=RECORD_SECONDS)
+    parser.add_argument("--project-root", default="")
+    args = parser.parse_args()
+    if args.duration_s <= 0:
+        parser.error("--duration-s must be positive")
+    if args.participant_code and not re.fullmatch(r"[A-Za-z0-9_-]+", args.participant_code):
+        parser.error("--participant-code may contain only letters, digits, underscore, and hyphen")
+    return args
+
+
 def main():
+    args = parse_args()
     started_at = datetime.now()
-    session_id = f"{SESSION_PREFIX}_{started_at.strftime('%Y%m%d_%H%M%S')}"
-    output_csv = Path(f"{session_id}_gaze.csv")
+    participant_suffix = f"_{args.participant_code}" if args.participant_code else ""
+    session_id = f"{SESSION_PREFIX}{participant_suffix}_{started_at.strftime('%Y%m%d_%H%M%S')}"
+    project_root = Path(
+        args.project_root
+        or os.environ.get("AISIMULATION_PROJECT_DIR", str(DEFAULT_PROJECT_ROOT))
+    )
+    output_dir = project_root / "logs" / "tobii"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_csv = output_dir / f"{session_id}_gaze.csv"
 
     trackers = tr.find_all_eyetrackers()
     print("trackers:", len(trackers))
@@ -94,14 +123,15 @@ def main():
             as_dictionary=True,
         )
 
-        print("Collecting gaze for", RECORD_SECONDS, "seconds...")
+        print("Participant code:", args.participant_code or "not specified")
+        print("Collecting gaze for", args.duration_s, "seconds...")
         print("Press Ctrl+C to stop early.")
 
         start_time = time.time()
         printed = 0
 
         try:
-            while time.time() - start_time < RECORD_SECONDS:
+            while time.time() - start_time < args.duration_s:
                 try:
                     gaze_data = data_queue.get(timeout=0.2)
                 except queue.Empty:

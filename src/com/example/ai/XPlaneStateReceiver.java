@@ -92,6 +92,7 @@ public class XPlaneStateReceiver extends Thread {
                         }
                     } else if (message.startsWith("EVENT,")) {
                         XPlaneEventRecord eventRecord = XPlaneEventRecord.fromUdpMessage(message, receivedTimestampMs, sessionId);
+                        autoEventDetector.beforeEventRecord(eventRecord);
                         eventLogger.log(eventRecord);
                         autoEventDetector.onEventRecord(eventRecord);
                     } else {

@@ -1,0 +1,2 @@
+airport_id,runway_id,near_latitude_deg,near_longitude_deg,far_latitude_deg,far_longitude_deg,elevation_m,width_m,source
+RKSI,34,37.44343592,126.44169978,37.47281563,126.41554514,6.096,60.05,X-Plane 11 default apt.dat

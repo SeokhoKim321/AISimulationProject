@@ -41,3 +41,20 @@ logs/
 slprj/
 j6dof-temp/
 desktop.ini
+
+### Python caches ###
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+### Local IDE state ###
+.idea/IntelliLang.xml
+
+### Local research references / third-party packages ###
+/2026 APISAT/
+/CognitiveAgentEvaluationforSyntheticPilotTraining.pdf
+/Simulator CWP-20260722_FST/
+/Simulator CWP-20260722_FST.zip
+/Simulator Server - 20260722_FST/
+/Simulator Server - 20260722_FST.zip
+/공모전.png

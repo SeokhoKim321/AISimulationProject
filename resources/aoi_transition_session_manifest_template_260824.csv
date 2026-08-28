@@ -1,0 +1,3 @@
+include,participant_code,session_label,context_gaze_csv,events_csv
+0,P001,session_P001_YYYYMMDD_HHMMSS,build_atc_tmp/P001_YYYYMMDD_HHMMSS_external_context_gaze.csv,logs/xplane/xplane_main_P001_YYYYMMDD_HHMMSS_events.csv
+0,P002,session_P002_YYYYMMDD_HHMMSS,build_atc_tmp/P002_YYYYMMDD_HHMMSS_external_context_gaze.csv,logs/xplane/xplane_main_P002_YYYYMMDD_HHMMSS_events.csv
