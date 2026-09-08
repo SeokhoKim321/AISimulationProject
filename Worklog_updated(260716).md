@@ -1052,3 +1052,84 @@ py tools\tobii\visualize_tobii_gaze.py --gaze build_atc_tmp\session_xplane_tobii
 - 시각화는 gaze point와 AOI transition을 보여주는 도구이다.
 - intruder를 실제로 시각 획득했다는 결론은 시각화만으로 내리지 않는다.
 - 보고용 해석은 `valid_gaze_rate`, dwell time, `advisory_to_first_OUTSIDE_entry_s`, `advisory_to_response_s`와 함께 사용한다.
+
+## 2026-07-16 X-Plane/Java/Tobii 동일 PC 실행 준비
+
+- 실제 X-Plane FlyWithLua `Scripts` 폴더의 활성 통합 Lua가 `127.0.0.1:9100`으로 Java receiver에 송신하도록 설정된 것을 확인했다.
+- Git 기준본 `FLYWITHLUA_STUDY_INTEGRATED.lua`의 `TARGET_HOST`도 `100.64.0.129`에서 `127.0.0.1`로 동기화했다.
+- Lua 버전, UDP 패킷 형식, command, event 및 scenario parameter는 변경하지 않았다.
+- 다음 검증은 같은 PC에서 Java receiver와 Tobii logger를 먼저 실행한 뒤 1~3개 짧은 X-Plane trial을 수집하는 것이다.
+
+## 2026-07-16 Tobii 원본 출력 폴더 통합
+
+- `session_xplane_tobii_logger.py`가 실행 위치 대신 `AISimulationProject/logs/tobii`에 gaze CSV를 저장하도록 수정했다.
+- 프로젝트가 이동한 경우 `AISIMULATION_PROJECT_DIR` 환경 변수로 project root를 재지정할 수 있다.
+- 기존 최신 gaze CSV는 복사 및 해시 검증 후 `logs/tobii`에서도 사용할 수 있게 한다. SDK 폴더의 기존 원본은 즉시 삭제하지 않는다.
+
+## 2026-07-16 동일 PC 첫 실험 분석 및 AOI 배경 갱신
+
+- Java `session_20260716_161359`와 Tobii `session_xplane_tobii_20260716_161408`을 timestamp 기준으로 병합했다.
+- STATE/INTRUDER sample은 각각 `1,262`, gaze는 `16,928` row이며 유효 gaze는 `12,414` row (`73.3%`)였다.
+- 10개 trial 중 1~9는 strict clean이고, trial 10은 `TRIAL_END` 누락으로 incomplete였다.
+- Java event와 Tobii gaze 시간은 `284.194 s` 동안 겹쳐 동일 PC 수집 구조가 정상임을 확인했다.
+- trial 1, 5, 8의 advisory 전후 gaze trajectory와 AOI timeline을 생성했다.
+- 새 전체화면 cockpit 캡처 `AOI그림.png`에 현재 6개 AOI를 overlay하여 계기 위치가 일치함을 확인했다.
+- 앞으로 `visualize_tobii_gaze.py`의 기본 배경은 `AOI그림.png`를 사용한다. `resources/cessnacokpit.png`는 이전 참고 이미지로만 보존한다.
+
+## 2026-07-16 AOI fallback 1단계 개선
+
+- 계기 AOI 밖의 모든 유효 gaze를 `OUTSIDE`로 합치던 규칙을 폐기했다.
+- 6개 계기 AOI를 먼저 판정하고, 나머지는 `y < 600 px`이면 `OUTSIDE_VIEW`, `y >= 600 px`이면 `PANEL_OTHER`로 판정한다.
+- `analyze_xplane_tobii_session.py`와 `visualize_tobii_gaze.py`에 `--panel-top-y` 옵션을 추가했다.
+- 동일 세션 재분석 결과는 `OUTSIDE_VIEW=8,457`, `PANEL_OTHER=2,231`이었다.
+- ATTITUDE와 HEADING 사이 20 px 간격에 들어온 gaze 70개는 모두 `PANEL_OTHER`로 확인됐다.
+- 다음 단계는 파랑-빨강 연속 색상 대신 event 기준 고정 시간 구간별 패널 시각화를 추가하는 것이다.
+
+## 2026-07-16 시간 구간 시각화 2단계 개선
+
+- `visualize_tobii_gaze.py`에 event 기준 6개 고정 시간 패널 SVG를 추가했다.
+- 이 단계의 초기 6구간은 이후 8패널 혼합 시간 구간 규칙으로 대체됐다.
+- 모든 점은 동일한 magenta 색을 사용하고 시간은 패널 제목으로 직접 구분한다.
+- 각 패널에 valid/plotted sample 수를 표시하며, 유효 gaze가 없는 구간도 빈 패널로 남긴다.
+- trial 1 검증에서 경고 전 두 구간은 valid 0이었고 이후 구간은 각각 `45`, `60`, `60`, `110`개였다.
+- 기존 전체 scatter, 연속 색상 trajectory, AOI timeline은 호환성을 위해 유지한다.
+
+## 2026-07-16 전 trial 경고 전 gaze 유효성 점검
+
+- trial 1~10의 고정 시간 패널을 모두 생성했다.
+- 모든 경고 전 구간에 약 60 Hz raw sample이 존재해 Java/Tobii timestamp 정렬 문제는 아니었다.
+- `-2~-1 s`는 `601`개 중 `188`개 유효 (`31.3%`), `-1~0 s`는 `595`개 중 `273`개 유효 (`45.9%`)였다.
+- trial 1, 5, 8은 경고 전 2초 동안 좌·우 validity가 모두 0이어서 점이 표시되지 않았다.
+- 빈 패널에서는 gaze 위치나 AOI를 추정하지 않는다. 초기 tracking-loss-only 해석은 이후 3모니터 조건 확인에 따라 정정했다.
+
+## 2026-07-16 3모니터 조건 반영 및 해석 정정
+
+- 실험 환경은 모니터 3개이며 Tobii Pro Spark는 정면 모니터 1개만 추적한다.
+- 기존 `INVALID` 분류를 `UNTRACKED_OR_OFF_DISPLAY`로 변경했다.
+- 앞서 빈 패널을 Tobii tracking loss로 단정한 해석은 폐기한다.
+- 새 분류는 정면 추적 화면에서 유효 gaze가 관측되지 않았다는 뜻이며, 좌우 모니터 응시와 실제 추적 손실을 현재 CSV만으로 구분할 수 없다.
+- 빈 구간에서는 AOI, 좌우 모니터 응시, 장비 오류를 추정하지 않는다.
+- 시간 구간 패널 label에 `front valid/total`과 `untracked/off-display` 수를 함께 표시하도록 수정했다.
+
+최종 재분석 결과:
+
+- 전체 gaze `16,928`, 정면 화면 유효 gaze `12,414` (`73.3%`), `UNTRACKED_OR_OFF_DISPLAY` `4,514` (`26.7%`).
+- 경고 전 2초 정면 화면 유효률: T1 `0.0%`, T2 `98.3%`, T3 `27.5%`, T4 `94.2%`, T5 `0.0%`, T6 `94.2%`, T7 `11.7%`, T8 `0.0%`, T9 `28.2%`, T10 `30.5%`.
+- `xplane_tobii_20260716_161359_three_monitor_*` 이름으로 재분석 CSV와 trial 1~10 시간 패널을 생성했다.
+
+## 2026-07-16 혼합 시간 구간 3단계 개선
+
+- 기존 6개 고정 구간을 최종 8개 혼합 구간으로 변경했다.
+- 새 기본 구간은 `-2~-1`, `-1~0`, `0~+0.5`, `+0.5~+1`, `+1~+2`, `+2~+3`, `+3~+4`, `+4~+5 s`이다.
+- 경고 직후 첫 1초는 빠른 반응 순서를 보존하기 위해 0.5초 단위로 나누고, 경고 전/회복 구간은 1~2초 폭을 유지한다.
+- 대표 clean trial 4에서 두 post-advisory 0.5초 구간이 각각 `30/30` 유효 sample로 정상 생성됐다.
+- 마지막 `+3~+5 s` 구간을 `+3~+4`, `+4~+5 s`로 분할해 총 8개 패널의 `4 x 2` 배치로 정리했다.
+
+## 2026-07-16 200ms 중심점 이동 4단계 개선
+
+- 8패널 안의 raw gaze 점을 `200 ms binned gaze centroid`로 요약했다.
+- 각 중심점은 해당 200ms 구간의 유효 gaze 평균 좌표이며, 패널 내부 시간 순서에 따라 색이 단계적으로 변한다.
+- 중심점 옆에 event 상대 midpoint 시간을 표시하고, 연속된 구간만 화살표로 연결한다.
+- 유효 gaze가 없는 200ms 구간은 보간하지 않으며 화살표도 건너뛰어 연결하지 않는다.
+- 이는 fixation 검출이 아니므로 결과 명칭에 fixation을 사용하지 않는다.
+- trial 4 검증 결과 중심점 36개, 이동 화살표 28개가 생성됐다.

@@ -4047,3 +4047,34 @@ Latest experienced reference:
 - experienced reference는 complete-six participant-equal 결과와 분리했고, 실제 인지시간·의도·
   모집단 차이를 주장하지 않도록 `visual opportunity` 및 engineering validation으로 서술했다.
 - Acknowledgments에는 제출 전 채울 IRB/면제, funding, COI placeholder를 노란색으로 남겼다.
+
+## 2026-09-01 해병항공 전투발전 워크숍 PPT 제작
+
+- 요청: 2026-09-22 제3회 해병항공 전투발전 워크숍 15-20분 발표자료
+- 제목: `AI 데이터를 활용한 조종능력 향상 방안`
+- 기준 자료: `2026 APISAT/APISAT-2026_FullPaper_KimSeokho_merged.pdf` 9쪽
+- 생성 도구: `tools/docs/create_marine_aviation_workshop_presentation.ps1`
+- PPTX: `2026 해병항공 전투발전 워크숍/제3회_해병항공_전투발전_워크숍_AI데이터_조종능력향상_김석호_260922.pptx`
+- PDF: 위 PPTX와 동명 PDF
+- 구성: 본 발표 17장 + 부록 3장, 총 20장, 발표자 노트 20개
+- 발표시간: 본 발표 노트 합계 약 `19분 55초`
+
+발표 스토리라인:
+
+1. 해병항공 고난도 임무와 시뮬레이터 반복훈련 필요
+2. 결과뿐 아니라 시선·상황·조종 과정 데이터를 남겨야 하는 이유
+3. 현재 X-Plane/Java/Tobii event-aligned framework와 자동 6-trial 절차
+4. visual opportunity, 고정/동적 AOI, DTMC Matrix 설명
+5. complete-six 36 trial 기술검증 결과와 해석 제한
+6. 인가 시뮬레이터 adapter-폐쇄망 분석 노드-교관 화면의 군 이식 구조
+7. 해병항공 적용 후보, 설명 가능한 디브리핑 화면, 단계적 AI roadmap
+8. 12주 interface/adaptor/scenario/technical validation 실증 제안
+
+검수:
+
+- PowerPoint PDF export 20쪽과 5개 contact sheet를 생성해 전 슬라이드를 시각 검수했다.
+- 첫 출력의 literal `\n` 표시 57개를 실제 줄바꿈으로 교정하고 PDF를 재출력했다.
+- 최종 PPTX 내부 구조는 slide `20`, speaker-note page `20`, embedded media `2`다.
+- 제목·도표·KPI·AOI 이미지·Matrix·출처의 잘림이 없음을 확인했다.
+- APISAT 수치와 군 적용 제안을 색상과 문구로 구분하고, AI가 교관을 대체하거나
+  현재 Matrix가 숙련자 기준이라는 표현을 사용하지 않았다.

@@ -539,3 +539,68 @@ logs\xplane\xplane_session_20260710_153000_events.csv
   - `*_trial_<trial_id>_advisory_shown_trajectory.svg`
   - `*_trial_<trial_id>_aoi_timeline.svg`
 - Treat the visualization as an inspection and presentation aid. Do not infer confirmed intruder acquisition from plotted gaze points alone.
+
+## 2026-07-16 Same-PC integration rule
+
+- X-Plane, `XPlaneReceiverMain`, and the Tobii logger are now intended to run on the same X-Plane PC.
+- Both the Git-managed reference Lua and the active FlyWithLua script use UDP target `127.0.0.1:9100`.
+- Keep IntelliJ `Program arguments` blank for repeated Tobii trials so Java creates timestamped files under `logs/xplane`.
+- ATC Simulator Server connectivity is not required for the current Tobii integration test unless explicitly requested.
+- Tobii raw gaze CSV files are stored under `logs/tobii`; Java receiver raw files remain under `logs/xplane`.
+- The logger defaults to the current X-Plane PC project path and supports relocation through `AISIMULATION_PROJECT_DIR`.
+
+## 2026-07-16 Same-PC trial and current visualization background
+
+- Verified same-PC session pair: Java `session_20260716_161359` and Tobii `session_xplane_tobii_20260716_161408`.
+- Results: 1,262 STATE rows, 1,262 INTRUDER rows, 16,928 gaze rows, 73.3% valid gaze, and 284.194 s timestamp overlap.
+- Nine of ten trials were strict clean; trial 10 was incomplete only because `TRIAL_END` was missing.
+- Use project-root `AOI그림.png` as the default cockpit background for all new Tobii gaze visualizations.
+- The new image is the current full-screen cockpit view (`1918x1073`) and closely matches the `1920x1080` Tobii coordinate system.
+- The six instrument AOIs were visually verified on this image. Keep `resources/cessnacokpit.png` only as a historical reference.
+
+## 2026-07-16 AOI fallback classification rule
+
+- The legacy single `OUTSIDE` fallback is superseded.
+- Evaluate the six instrument rectangles first.
+- Classify remaining valid gaze as `OUTSIDE_VIEW` when `y < 600 px` and `PANEL_OTHER` when `y >= 600 px`.
+- Use `--panel-top-y` to override the boundary if the cockpit view changes.
+- Do not force points in gaps between instruments into the nearest instrument AOI.
+- On the verified session, all 70 points in the ATTITUDE–HEADING gap were classified as `PANEL_OTHER`.
+
+## 2026-07-16 Fixed time-bin visualization rule
+
+- Generate `*_trial_<trial_id>_<event>_time_bins.svg` alongside the existing gaze figures.
+- The initial six-bin implementation is historical and superseded by the current eight-panel rule below.
+- Use explicit panel labels and one point color instead of relying on a continuous blue-to-red time gradient.
+- Keep empty panels visible and report valid/plotted sample counts; do not infer gaze location when a bin has no valid samples.
+
+## 2026-07-16 Pre-advisory gaze validity finding
+
+- Empty pre-advisory panels in the verified session are caused by bilateral Tobii validity loss, not missing raw samples or timestamp misalignment.
+- Aggregate valid rates were `31.3%` for `-2~-1 s` and `45.9%` for `-1~0 s`.
+- Trials 1, 5, and 8 had no valid gaze throughout the full two seconds before advisory.
+- Do not interpolate an AOI or claim outside-view gaze for these intervals. The initial tracking-loss-only interpretation is superseded by the three-monitor rule below.
+
+## 2026-07-16 Three-monitor Tobii interpretation correction
+
+- The experiment uses three monitors, while Tobii Pro Spark tracks only the front monitor.
+- The previous instruction to treat all bilateral invalidity as tracking loss is superseded.
+- Use `UNTRACKED_OR_OFF_DISPLAY` instead of `INVALID` in new outputs.
+- This means no valid coordinate was observed on the tracked front display; possible causes include side-monitor gaze, blink, occlusion, posture outside the tracking box, or tracker loss.
+- Do not infer which cause occurred from the current gaze CSV alone.
+- Time-bin figures must show `front valid/total` and `untracked/off-display` counts for each interval.
+- Final verified-session counts are `12,414 / 16,928 = 73.3%` valid front-display gaze and `4,514 = 26.7%` `UNTRACKED_OR_OFF_DISPLAY`.
+
+## 2026-07-16 Hybrid time-bin rule
+
+- Use eight event-relative bins by default: `-2~-1`, `-1~0`, `0~+0.5`, `+0.5~+1`, `+1~+2`, `+2~+3`, `+3~+4`, and `+4~+5 s`.
+- Preserve 0.5 s resolution during the first second after advisory; do not replace it with a 2 s panel for response-sequence analysis.
+- Wider 1~2 s bins remain acceptable for pre-event context and later recovery.
+- Split the former `+3~+5 s` recovery bin into `+3~+4` and `+4~+5 s`; the current standard layout is eight panels in a `4 x 2` grid.
+
+## 2026-07-16 Within-panel centroid movement rule
+
+- Represent within-panel movement using `200 ms binned gaze centroids` with event-relative midpoint labels.
+- Apply discrete time colors within each panel and connect only consecutive non-empty windows with arrows.
+- Do not interpolate missing windows or connect arrows across a missing 200 ms interval.
+- Do not call these points fixations unless a separate validated fixation-detection algorithm is added.

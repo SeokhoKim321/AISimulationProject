@@ -2941,3 +2941,14 @@ self-transition 약 `74%`, switch 약 `73~74/min`으로 유사했다. 반복 재
   인과효과를 주장하지 않는다.
 - 사람 데이터 출판에는 IRB 승인 또는 기관 공식 면제 판단이 선행되어야 하며,
   APISAT과 KAI의 중복게재/동시제출 규정도 각각 확인한다.
+
+## 2026-08-28 APISAT full-paper draft
+
+- APISAT 공식 양식 `2026 APISAT/FullPaperTemplate_APISAT-2026.docx`를 바탕으로
+  영문 full-paper 초안을 생성했다.
+- 산출물은 `APISAT-2026_FullPaper_Draft_260828.docx`, 동명 PDF 및 편집용 Markdown이다.
+- 원고는 7쪽, 약 3,998 words, 163-word abstract이며 그림 4개와 데이터 표 3개를 포함한다.
+- 논문의 중심 주장은 숙련도 우열이 아니라 event-aligned X-Plane/Java/Tobii 수집·분석
+  파이프라인의 기술적 실현 가능성과 감사 가능한 AOI/DTMC 산출이다.
+- 제출 전 필수 보완은 IRB 승인 또는 면제 결정, funding/COI/acknowledgment 확정,
+  45-px AOI tolerance 검증, 110-KIAS speed-gate 수정 및 영문·인용 최종 교정이다.

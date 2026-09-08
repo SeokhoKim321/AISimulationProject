@@ -2969,11 +2969,3 @@ self-transition 약 `74%`, switch 약 `73~74/min`으로 유사했다. 반복 재
   공중강습·신속대응은 후속 검증 후보이며 현재 구현 완료로 표현하지 않는다.
 - 공개 근거는 방위사업청 마린온 전력화 자료, KAI MUH-1 및 훈련체계 자료,
   방위사업청 KUH-1 비행훈련시뮬레이터 자료를 사용했다.
-
-## 2026-09-08 Git publication state
-
-- APISAT full-paper 초안 생성 과정과 2026-09-22 해병항공 전투발전 워크숍 발표자료를 프로젝트 문서 이력에 반영했다.
-- 워크숍 산출물은 PPTX/PDF와 GitHub에서 내용을 확인할 수 있는 `README.md`로 구성한다.
-- 재생성 스크립트 `tools/docs/create_marine_aviation_workshop_presentation.ps1`는 워크숍 폴더의 `assets/cockpit_aoi_overlay.png`, `assets/aoi_dtmc_complete6.png`를 사용하므로 추적 저장소만으로 입력 그림을 찾을 수 있다.
-- 논문 공식 양식·참고 문헌·로컬 최종본이 포함된 `2026 APISAT/`는 기존대로 Git에서 제외한다. 논문 작성 과정은 기준 MD와 `tools/docs/create_apisat_fullpaper_draft.ps1`로 추적한다.
-- 참가자 원본 로그, CSV, 임시 분석 파일 및 개인 IDE 설정은 공개 커밋 범위에서 제외한다.

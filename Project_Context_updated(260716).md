@@ -849,3 +849,78 @@ Generated SVG outputs:
 - `build_atc_tmp\xplane_tobii_test_260710_visual_trial_8_aoi_timeline.svg`
 
 These figures are intended for quick inspection and meeting/APISAT visuals. Interpretation should still rely on dwell, entry timing, valid gaze rate, and event-aligned trial summaries.
+
+## 2026-07-16 Same-PC X-Plane/Java/Tobii operation
+
+- X-Plane, Java receiver, and Tobii logger are now operated on the same X-Plane PC.
+- The Git-managed reference `FLYWITHLUA_STUDY_INTEGRATED.lua` uses UDP target `127.0.0.1:9100`, matching the active FlyWithLua script.
+- The active script remains `260610_intruder_geo_atc_v21`; the packet schema and scenario logic were not changed.
+- Run `XPlaneReceiverMain` with blank program arguments to create timestamped CSV files under `logs/xplane`.
+- The Tobii session logger writes timestamped gaze CSV files directly under `logs/tobii`, even when it is launched from the SDK `64` folder.
+- `AISIMULATION_PROJECT_DIR` may override the default project root when the workspace is moved.
+
+## 2026-07-16 Same-PC integrated trial and AOI verification
+
+- The first same-PC X-Plane/Java/Tobii trial session was successfully collected and merged.
+- Java session `session_20260716_161359` contains 1,262 STATE rows, 1,262 INTRUDER rows, 10 hazards, 10 advisories, and 10 detected pilot responses.
+- Trials: 10 total, 9 strict clean, 1 incomplete because trial 10 has no `TRIAL_END`.
+- Tobii session `session_xplane_tobii_20260716_161408` contains 16,928 gaze rows and 12,414 valid rows (`73.3%`).
+- Java event and Tobii gaze timelines overlap for `284.194 s`.
+- `AOI그림.png` is the new standard visualization background. It represents the current full-screen X-Plane cockpit view and supersedes `resources/cessnacokpit.png` for new figures.
+- The current six AOI rectangles were checked on `AOI그림.png` and correctly cover AIRSPEED, ATTITUDE, ALTITUDE, HEADING, VERTICAL_SPEED, and NAV_GPS.
+- `OUTSIDE` means only that valid gaze was outside the six instrument AOIs; it does not prove intruder acquisition.
+
+AOI fallback refinement:
+
+- The former single `OUTSIDE` category is superseded by `OUTSIDE_VIEW` and `PANEL_OTHER`.
+- Instrument rectangles are evaluated first.
+- A remaining valid point with `y < 600 px` is `OUTSIDE_VIEW`; one with `y >= 600 px` is `PANEL_OTHER`.
+- The boundary is configurable with `--panel-top-y`; default is `600` for the current full-screen cockpit view.
+- Reanalysis produced `OUTSIDE_VIEW=8457` and `PANEL_OTHER=2231`.
+- All 70 gaze rows in the ATTITUDE–HEADING 20 px gap were classified as `PANEL_OTHER`.
+
+Time-panel visualization update:
+
+- `visualize_tobii_gaze.py` now creates a fixed event-relative time-bin SVG in addition to the existing scatter, trajectory, and AOI timeline.
+- The initial time-panel version used six broad bins; it is superseded by the current eight-panel rule below.
+- Each panel uses one point color and an explicit time label; blue-to-red color interpretation is not required.
+- Each panel prints valid/plotted sample counts, and empty pre-event panels remain visible as evidence of missing valid gaze.
+
+Pre-advisory validity audit for the 2026-07-16 session:
+
+- All ten trials contained the expected raw Tobii samples in the two seconds before `ADVISORY_SHOWN`; the empty panels are not caused by timestamp misalignment.
+- Aggregate valid rate was `188/601 = 31.3%` for `-2~-1 s` and `273/595 = 45.9%` for `-1~0 s`.
+- Trials 1, 5, and 8 had zero valid samples throughout both pre-advisory bins, with both left and right validity equal to zero.
+- These intervals contain no valid front-display coordinate. The initial tracking-loss-only interpretation was later corrected after confirming the three-monitor setup.
+
+Three-monitor interpretation correction:
+
+- The setup uses three monitors; Tobii Pro Spark tracks only the front monitor.
+- The previous statement that empty pre-advisory panels necessarily mean tracking loss is superseded.
+- New outputs use `UNTRACKED_OR_OFF_DISPLAY` instead of `INVALID`.
+- This category means no valid coordinate was observed on the tracked front display and may include side-monitor gaze as well as genuine tracking loss, blink, occlusion, or out-of-range posture.
+- The current CSV cannot distinguish those causes, so no side-monitor gaze or tracker failure is inferred without additional evidence.
+- Fixed time-bin figures display both front-monitor valid counts and `untracked/off-display` counts for every interval.
+
+Final three-monitor reanalysis:
+
+- Total gaze rows: `16,928`.
+- Valid front-display gaze: `12,414` (`73.3%`).
+- `UNTRACKED_OR_OFF_DISPLAY`: `4,514` (`26.7%`).
+- Pre-advisory two-second front-display valid rates by trial: T1 `0.0%`, T2 `98.3%`, T3 `27.5%`, T4 `94.2%`, T5 `0.0%`, T6 `94.2%`, T7 `11.7%`, T8 `0.0%`, T9 `28.2%`, T10 `30.5%`.
+- New outputs: `build_atc_tmp/xplane_tobii_20260716_161359_three_monitor_gaze_aoi.csv` and `..._three_monitor_trial_gaze_summary.csv`.
+
+Hybrid time-bin update:
+
+- The default event-relative figure now uses eight mixed-width bins: `-2~-1`, `-1~0`, `0~+0.5`, `+0.5~+1`, `+1~+2`, `+2~+3`, `+3~+4`, and `+4~+5 s`.
+- The first post-advisory second is split into 0.5 s panels to preserve rapid gaze/response changes; using 2 s panels there would obscure event order.
+- Trial 4 verified both post-advisory half-second bins with `30/30` front-display valid samples.
+- The final `+3~+5 s` interval is split into `+3~+4` and `+4~+5 s`, producing a balanced eight-panel `4 x 2` figure.
+
+Within-panel movement update:
+
+- Raw points in the eight-panel figure are summarized as 200 ms binned gaze centroids.
+- Discrete colors and event-relative midpoint labels show time within each panel.
+- Directional arrows connect only consecutive non-empty 200 ms windows; gaps are not interpolated.
+- This is not a fixation algorithm. Report the output as `200 ms binned gaze centroid` movement.
+- Trial 4 verification generated 36 centroids and 28 arrows.

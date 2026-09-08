@@ -1998,3 +1998,19 @@ Interpretation limits:
 - primary complete-six와 experienced reference를 합치지 않으며 participant-equal 결과를 우선한다.
 - `INTRUDER_VISUAL_OPPORTUNITY_ONSET`은 관측 기회 proxy이지 실제 인지시점이 아니다.
 - 제출 전 Acknowledgments의 IRB/면제, funding, COI placeholder를 실제 결정으로 교체한다.
+
+## 2026-09-01 marine aviation workshop presentation rule
+
+- 워크숍 발표 기준본은 `2026 해병항공 전투발전 워크숍/`의 260922 PPTX이며,
+  `tools/docs/create_marine_aviation_workshop_presentation.ps1`로 재생성한다.
+- 제목은 `AI 데이터를 활용한 조종능력 향상 방안`이고 본 발표 17장, 부록 3장이다.
+- PowerShell 5에서 한글 script는 UTF-8 BOM을 유지한다. `Add-Text`는 literal `\n`을
+  실제 paragraph break로 변환해야 한다.
+- 발표에서는 현재 구현, 기술검증 결과, 군 적용 제안을 명시적으로 구분한다.
+- 현재 Matrix를 숙련 조종사 기준으로 부르거나 visual opportunity를 실제 인지로 부르지 않는다.
+- 군 적용 핵심은 X-Plane 반입이 아니라 simulator interface adapter, 폐쇄망 분석,
+  교관 중심 디브리핑이다.
+- 초기 AI는 자동평가가 아니라 SOP 규칙모델과 설명자료로 제한하며, 숙련 기준모델과
+  개인화 추천은 qualified-pilot 자료와 교관 검증 이후 단계로 둔다.
+- 초기 운용은 비식별·비징계·개인 발전 목적을 우선하고, 연구·출판은 IRB/면제와
+  보안성 검토를 별도로 수행한다.
